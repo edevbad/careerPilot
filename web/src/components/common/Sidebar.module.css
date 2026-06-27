@@ -1,0 +1,76 @@
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.25rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logoIcon {
+  font-size: 1.5rem;
+}
+
+.logoText {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: -0.3px;
+}
+
+.nav {
+  flex: 1;
+  padding: 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.navItem.active {
+  background: #ede9fe;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.icon {
+  font-size: 1.1rem;
+  width: 1.4rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
