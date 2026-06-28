@@ -33,3 +33,24 @@ exports.refreshToken = async(refreshToken) => {
     }
     return user;
 };
+
+exports.getProfile = async (userId) => {
+  const user = await User.findById(userId)
+  if (!user) throw new AppError(404, 'User not found')
+  return user
+}
+
+exports.updateProfile = async (userId, updates) => {
+  const allowedFields = ['name', 'careerGoal']
+  const filtered = {}
+  allowedFields.forEach((field) => {
+    if (updates[field] !== undefined) filtered[field] = updates[field]
+  })
+
+  const user = await User.findByIdAndUpdate(userId, filtered, {
+    new: true,
+    runValidators: true,
+  })
+  if (!user) throw new AppError(404, 'User not found')
+  return user
+}

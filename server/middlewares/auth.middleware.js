@@ -1,4 +1,7 @@
+const User = require("../models/user.model");
+const AppError = require("../utils/appError");
 const { asyncHandler } = require("../utils/asyncHandler");
+const { verifyAccessToken } = require("../utils/jwt");
 
 exports.protect = asyncHandler(async (req, res, next) => {
     let token;
@@ -11,7 +14,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    const decoded = verifyAccessToken(token);
 
     // Check if user still exists
     const currentUser = await User.findById(decoded.id);

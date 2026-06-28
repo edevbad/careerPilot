@@ -3,7 +3,7 @@ const cookieParser = require('cookie-parser');
 const express = require('express');
 require('./config/db.js');
 const cors = require('cors');
-const errorHandler = require('./middlewares/errorHandler.js');
+const {errorHandler,notFound} = require('./middlewares/errorHandler.js');
 
 const app = express();
 
@@ -15,8 +15,11 @@ app.use(cors({
 }))
 
 app.use('/api/auth', require('./modules/auth/auth.routes.js'));
+app.use('/api/roadmaps', require('./modules/roadmap/roadmap.routes.js'));
+app.use('/api/progress', require('./modules/progress/progress.routes.js'));
 
-app.use(errorHandler)
+app.use(notFound);
+app.use(errorHandler);
 
 app.listen(5000, () => {
   console.log('Server is running on port 5000');
