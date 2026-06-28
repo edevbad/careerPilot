@@ -14,7 +14,7 @@ export default function RoadmapDetail() {
 
   useEffect(() => {
     getRoadmapById(id)
-      .then((res) => setRoadmap(res.data.roadmap))
+      .then((res) => setRoadmap(res.data.data.roadmap))
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])

@@ -2,7 +2,7 @@ const {asyncHandler} = require('../../utils/asyncHandler')
 const ApiResponse  = require('../../utils/apiResponse')
 const roadmapService = require('./roadmap.service')
 
-const generateRoadmap = asyncHandler(async (req, res) => {
+const generateRoadmap = asyncHandler(async (req, res) => {  
   const { targetCareer, skillLevel, duration, interests } = req.body
   const roadmap = await roadmapService.generateRoadmap(req.user._id, {
     targetCareer,

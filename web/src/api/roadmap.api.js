@@ -3,13 +3,10 @@ import { nodeAPI } from './axiosInstance'
 export const generateRoadmap = (assessmentData) =>
   nodeAPI.post('/roadmaps/generate', assessmentData)
 
-<<<<<<< Updated upstream
-=======
 // src/api/roadmap.api.js — add this function
 export const regenerateRoadmap = (id, feedback = '') =>
   nodeAPI.post(`/roadmaps/${id}/regenerate`, { feedback })
 
->>>>>>> Stashed changes
 export const getRoadmaps = () =>
   nodeAPI.get('/roadmaps')
 

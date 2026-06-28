@@ -13,6 +13,8 @@ const validate = (validations) => {
       field: err.path,
       message: err.msg,
     }))
+    console.log(formatted);
+    
 
     return res.status(400).json({
       success: false,

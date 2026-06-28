@@ -23,6 +23,12 @@ const userSchema = new mongoose.Schema(
       minlength: [8, 'Password must be at least 8 characters'],
       select: false, // Never returned in queries by default
     },
+     // Hashed refresh token — null when logged out
+    refreshToken: {
+      type:    String,
+      select:  false,
+      default: null,
+    },
     careerGoal: {
       type: String,
       default: '',
@@ -37,15 +43,8 @@ const userSchema = new mongoose.Schema(
 )
 
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) {
-    throw new Error('Password is not modified');
-  }
-  try{
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  }
-  catch(err){
-    throw new Error('Error hashing password');
+   if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12)
   }
 });
 userSchema.methods.comparePassword = async function (candidatePassword) {

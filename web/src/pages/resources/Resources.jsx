@@ -11,7 +11,7 @@ export default function Resources() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    getSkills().then((res) => setSkills(res.data.skills || [])).catch(console.error)
+    getSkills().then((res) => setSkills(res.data.data.skills || [])).catch(console.error)
   }, [])
 
   const handleSkillSelect = async (skill) => {
@@ -19,7 +19,7 @@ export default function Resources() {
     setLoading(true)
     try {
       const res = await getResources(skill.id)
-      setResources(res.data.resources || [])
+      setResources(res.data.data.resources || [])
     } catch {
       setResources([])
     } finally {

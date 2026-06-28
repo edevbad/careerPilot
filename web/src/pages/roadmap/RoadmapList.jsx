@@ -12,7 +12,7 @@ export default function RoadmapList() {
 
   useEffect(() => {
     getRoadmaps()
-      .then((res) => setRoadmaps(res.data.roadmaps || []))
+      .then((res) => setRoadmaps(res.data.data.roadmaps || []))
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
