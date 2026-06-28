@@ -26,8 +26,7 @@ export default function RoadmapDetail() {
   }
 
   const handleToggleSkill = async (phaseIdx, skillIdx, current) => {
-    const skillId = `${phaseIdx}-${skillIdx}`
-    await updateProgress(id, skillId, !current)
+    await updateProgress(id, skillIdx, phaseIdx, !current)
     setRoadmap((prev) => {
       const updated = { ...prev }
       updated.phases[phaseIdx].skills[skillIdx].completed = !current

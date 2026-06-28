@@ -23,7 +23,7 @@ router.use(protect)
 
 router.post('/generate',
   validate(generateRoadmapValidator),
-  generateRoadmap
+generateRoadmap
 )
 
 router.post('/:id/regenerate',

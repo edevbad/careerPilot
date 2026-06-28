@@ -7,7 +7,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
     const authHeader = req.headers.authorization
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new ApiError(401, 'Not authorized. No token provided.')
+        throw new AppError(401, 'Not authorized. No token provided.')
     }
     const token = authHeader.split(' ')[1];
 
