@@ -1,56 +1,60 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import { registerUser } from '@/api/auth.api'
-import Input from '@/components/ui/Input'
-import Button from '@/components/ui/Button'
-import styles from './Auth.module.css'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { registerUser } from "@/api/auth.api";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
+import styles from "./Auth.module.css";
 
 export default function Register() {
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
-  const [errors, setErrors] = useState({})
-  const [serverError, setServerError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.id]: e.target.value }))
+    setForm((prev) => ({ ...prev, [e.target.id]: e.target.value }));
 
   const validate = () => {
-    const errs = {}
-    if (!form.name.trim()) errs.name = 'Name is required'
-    if (!form.email.trim()) errs.email = 'Email is required'
-    if (form.password.length < 8) errs.password = 'Password must be at least 8 characters'
-    return errs
-  }
+    const errs = {};
+    if (!form.name.trim()) errs.name = "Name is required";
+    if (!form.email.trim()) errs.email = "Email is required";
+    if (form.password.length < 8)
+      errs.password = "Password must be at least 8 characters";
+    return errs;
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setServerError('')
-    const errs = validate()
+    e.preventDefault();
+    setServerError("");
+    const errs = validate();
     if (Object.keys(errs).length > 0) {
-      setErrors(errs)
-      return
+      setErrors(errs);
+      return;
     }
-    setErrors({})
-    setLoading(true)
+    setErrors({});
+    setLoading(true);
     try {
-      const res = await registerUser(form)
-      login(res.data.token, res.data.user)
-      navigate('/assessment')
+      const res = await registerUser(form);
+      const { accessToken, user } = res.data;
+      login(accessToken, user);
+      navigate("/assessment");
     } catch (err) {
-      setServerError(err.response?.data?.message || 'Registration failed.')
+      setServerError(err.response?.data?.message || "Registration failed.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className={styles.wrapper}>
       <h2 className={styles.title}>Create your account</h2>
-      <p className={styles.subtitle}>Start building your career roadmap today.</p>
+      <p className={styles.subtitle}>
+        Start building your career roadmap today.
+      </p>
 
       {serverError && <div className={styles.alert}>{serverError}</div>}
 
@@ -93,5 +97,5 @@ export default function Register() {
         Already have an account? <Link to="/login">Sign in</Link>
       </p>
     </div>
-  )
+  );
 }

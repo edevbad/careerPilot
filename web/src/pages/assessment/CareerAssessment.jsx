@@ -21,7 +21,7 @@ const DURATIONS = ['1 month', '3 months', '6 months', '1 year']
 export default function CareerAssessment() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
-    careerGoal: '',
+    targetCareer: '',
     skillLevel: '',
     interests: '',
     duration: '',
@@ -38,7 +38,8 @@ export default function CareerAssessment() {
     setLoading(true)
     try {
       const res = await generateRoadmap(form)
-      navigate(`/roadmaps/${res.data.roadmap._id}`)
+      console.log(res)
+      navigate(`/roadmaps/${res.data.data.roadmap._id}`)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate roadmap.')
     } finally {
@@ -57,8 +58,8 @@ export default function CareerAssessment() {
             <label className={styles.label}>Target Career *</label>
             <select
               className={styles.select}
-              value={form.careerGoal}
-              onChange={(e) => handleChange('careerGoal', e.target.value)}
+              value={form.targetCareer}
+              onChange={(e) => handleChange('targetCareer', e.target.value)}
               required
             >
               <option value="">Select a career path</option>

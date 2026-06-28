@@ -9,10 +9,15 @@
  */
 
 
+const AppError = require('../utils/appError');
 const Logger = require('../utils/logger');
 
 // Fields we never expose in error responses (prevent information leakage)
 const SENSITIVE_FIELDS = ['password', 'token', 'secret', 'apiKey'];
+
+const notFound = (req, res, next) => {
+  next(new AppError(404, `Route not found: ${req.originalUrl}`))
+}
 
 const errorHandler = (err, req, res, next) => {
   // Log full stack in all environments — use log shipper to filter in prod
@@ -98,6 +103,20 @@ const errorHandler = (err, req, res, next) => {
     message = 'An unexpected error occurred. Please try again later.';
   }
 
+  
+   // Gemini / external AI errors
+  if (statusCode === 429) {
+    message = message || 'Too many requests. Please wait and try again.'
+  }
+
+  if (statusCode === 503) {
+    message = message || 'AI service is temporarily unavailable.'
+  }
+
+  if (statusCode === 502) {
+    message = message || 'AI service returned an unexpected response.'
+  }
+
   const body = { success: false, message };
   if (errors) body.errors = errors;
 
@@ -111,7 +130,8 @@ const errorHandler = (err, req, res, next) => {
     return next(err);
   }
 
+
   res.status(statusCode).json(body);
 };
 
-module.exports = errorHandler;
+module.exports = {errorHandler,notFound};
