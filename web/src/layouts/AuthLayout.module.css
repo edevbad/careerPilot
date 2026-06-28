@@ -1,0 +1,64 @@
+.wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+.brandPanel {
+  flex: 1;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.brandContent {
+  text-align: center;
+  color: #fff;
+}
+
+.logo {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.brandName {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.5px;
+}
+
+.tagline {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.formPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--color-surface);
+}
+
+.formContainer {
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    flex-direction: column;
+  }
+  .brandPanel {
+    padding: 2rem 1rem;
+    min-height: 180px;
+  }
+  .brandName {
+    font-size: 1.8rem;
+  }
+}

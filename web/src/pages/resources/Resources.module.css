@@ -1,0 +1,53 @@
+.page { }
+.heading { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+.sub { color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+.layout {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.skillPanel {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.panelTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.skillBtn {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  transition: background 0.15s;
+}
+
+.skillBtn:hover { background: var(--color-border); }
+.activeSkill { background: #ede9fe; color: var(--color-primary); font-weight: 600; }
+
+.resourcePanel { flex: 1; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.resourceTitle { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+.resourceLink { font-size: 0.85rem; color: var(--color-primary); }
+.empty { color: var(--color-text-muted); font-size: 0.9rem; }
+.center { display: flex; justify-content: center; padding: 2rem; }
