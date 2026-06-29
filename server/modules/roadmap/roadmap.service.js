@@ -1,5 +1,5 @@
-const AppError = require('../../utils/appError')
-const Roadmap = require('../../models/roadmap.model')
+const AppError   = require('../../utils/appError')
+const Roadmap    = require('../../models/roadmap.model')
 const { getGeminiModel } = require('../../config/gemini')
 const {
   SYSTEM_INSTRUCTION,
@@ -7,112 +7,73 @@ const {
   buildRegeneratePrompt,
 } = require('./roadmap.prompts')
 
-// ─── Retry Helper ──────────────────────────────────────────────────────────────
-
-/**
- * Waits for a given number of milliseconds.
- */
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-/**
- * Extracts the retry delay in ms from a Gemini 429 error message.
- * Falls back to `defaultMs` if not found.
- */
-const parseRetryDelay = (errorMessage, defaultMs = 15000) => {
-  const match = errorMessage?.match(/retryDelay[^0-9]*(\d+)/)
-  if (match) return parseInt(match[1], 10) * 1000
-  return defaultMs
-}
-
 // ─── Gemini Caller ─────────────────────────────────────────────────────────────
 
-/**
- * Sends a prompt to Gemini with automatic retry on 429.
- * Retries up to `maxRetries` times with the delay Gemini specifies.
- */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+const parseRetryDelay = (msg, defaultMs = 15000) => {
+  const match = msg?.match(/retryDelay[^0-9]*(\d+)/)
+  return match ? parseInt(match[1], 10) * 1000 : defaultMs
+}
+
 const callGemini = async (prompt, maxRetries = 2) => {
   let attempt = 0
 
   while (attempt <= maxRetries) {
     try {
-      const model = getGeminiModel()
-
+      const model  = getGeminiModel()
       const result = await model.generateContent({
         systemInstruction: SYSTEM_INSTRUCTION,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       })
-
+      
       const raw = result.response.text()
+      if (!raw?.trim()) throw new AppError(502, 'AI returned an empty response.')
 
-      if (!raw || raw.trim() === '') {
-        throw new AppError(502, 'AI service returned an empty response. Please try again.')
-      }
-
-      // Strip accidental markdown fences
-      const cleaned = raw
-        .trim()
+      const cleaned = raw.trim()
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```\s*$/i, '')
         .trim()
 
-      let parsed
       try {
-        parsed = JSON.parse(cleaned)
+        return JSON.parse(cleaned)
       } catch {
-        console.error('Gemini raw response (unparseable):', raw)
-        throw new AppError(502, 'AI service returned malformed data. Please try again.')
+        console.error('Unparseable Gemini response:', raw)
+        throw new AppError(502, 'AI returned malformed data. Please try again.')
       }
 
-      return parsed
-
     } catch (err) {
-      const message = err.message || ''
-      const is429   = message.includes('429') || message.includes('Too Many Requests')
-      const isQuota = message.includes('quota')
+      const msg     = err.message || ''
+      const is429   = msg.includes('429') || msg.includes('Too Many Requests')
+      const isQuota = msg.includes('quota')
 
-      // If it's a quota/rate-limit error and we have retries left — wait and retry
       if ((is429 || isQuota) && attempt < maxRetries) {
-        const delay = parseRetryDelay(message, 20000)
-        console.warn(
-          `Gemini rate limit hit. Retrying in ${delay / 1000}s... ` +
-          `(attempt ${attempt + 1} of ${maxRetries})`
-        )
+        const delay = parseRetryDelay(msg, 20000)
+        console.warn(`Gemini rate limit. Retrying in ${delay / 1000}s... (attempt ${attempt + 1})`)
         await sleep(delay)
         attempt++
         continue
       }
 
-      // Daily quota exhausted — no point retrying
-      if (isQuota && message.includes('limit: 0')) {
-        throw new AppError(
-          503,
-          'The AI service daily quota has been reached. Please try again tomorrow or upgrade your Gemini plan.'
-        )
+      if (isQuota && msg.includes('limit: 0')) {
+        throw new AppError(503, 'AI daily quota reached. Please try again tomorrow.')
       }
 
-      // Rate limit but out of retries
       if (is429 || isQuota) {
-        throw new AppError(
-          429,
-          'The AI service is busy. Please wait a moment and try again.'
-        )
+        throw new AppError(429, 'AI service is busy. Please wait and try again.')
       }
 
-      // Any other error — rethrow as-is (AppError or unknown)
       if (err.statusCode) throw err
-      throw new AppError(502, `AI service error: ${message}`)
+      throw new AppError(502, `AI service error: ${msg}`)
     }
   }
 }
 
+// ─── Validator ─────────────────────────────────────────────────────────────────
 
-/**
- * Validates the AI-generated roadmap shape before saving to DB.
- * Prevents saving garbage data if the model drifts from the schema.
- */
 const validateAIRoadmap = (data) => {
-  if (!data.phases || !Array.isArray(data.phases) || data.phases.length === 0) {
+  if (!Array.isArray(data.phases) || data.phases.length === 0) {
     throw new AppError(502, 'AI returned an invalid roadmap structure.')
   }
 
@@ -120,20 +81,85 @@ const validateAIRoadmap = (data) => {
     if (!phase.title || !Array.isArray(phase.skills) || phase.skills.length === 0) {
       throw new AppError(502, 'AI returned a phase with missing title or skills.')
     }
+
     for (const skill of phase.skills) {
       if (!skill.name || typeof skill.name !== 'string') {
-        throw new AppError(502, 'AI returned a skill with a missing or invalid name.')
+        throw new AppError(502, 'AI returned a skill with missing name.')
+      }
+      if (!Array.isArray(skill.dailyTasks) || skill.dailyTasks.length === 0) {
+        throw new AppError(502, `AI returned skill "${skill.name}" with no daily tasks.`)
       }
     }
   }
 }
 
+// ─── Map AI Output → DB Shape ──────────────────────────────────────────────────
+
+const mapPhases = (aiPhases, preservedSkills = {}) =>
+  aiPhases.map((phase, idx) => ({
+    title:       phase.title,
+    order:       phase.order ?? idx + 1,
+    description: phase.description || '',
+    startDate:   phase.startDate ? new Date(phase.startDate) : null,
+    endDate:     phase.endDate   ? new Date(phase.endDate)   : null,
+    skills: (phase.skills || []).map((s) => {
+      const key       = s.name.toLowerCase()
+      const preserved = preservedSkills[key] || {}
+
+      return {
+        name:          s.name,
+        description:   s.description  || '',
+        estimatedDays: s.estimatedDays || 7,
+        startDate:     s.startDate ? new Date(s.startDate) : null,
+        endDate:       s.endDate   ? new Date(s.endDate)   : null,
+        // Preserve completion if skill existed before (on regenerate)
+        completed:     preserved.completed  ?? false,
+        completedAt:   preserved.completedAt ?? null,
+        dailyTasks: (s.dailyTasks || []).map((t, tIdx) => ({
+          day:         t.day ?? tIdx + 1,
+          title:       t.title       || `Day ${t.day ?? tIdx + 1} Task`,
+          description: t.description || '',
+          // Preserve task completion on regenerate
+          completed:   preserved.tasks?.[t.day] ?? false,
+          completedAt: preserved.taskDates?.[t.day] ?? null,
+        })),
+      }
+    }),
+  }))
+
+// Build a lookup map of previous skill completion state for regeneration
+const buildPreservedSkills = (existingPhases) => {
+  const map = {}
+
+  for (const phase of existingPhases) {
+    for (const skill of phase.skills) {
+      const key    = skill.name.toLowerCase()
+      const tasks  = {}
+      const dates  = {}
+
+      for (const t of skill.dailyTasks || []) {
+        tasks[t.day]  = t.completed
+        dates[t.day]  = t.completedAt
+      }
+
+      map[key] = {
+        completed:   skill.completed,
+        completedAt: skill.completedAt,
+        tasks,
+        dates,
+      }
+    }
+  }
+
+  return map
+}
+
 // ─── Service Functions ─────────────────────────────────────────────────────────
 
-const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, interests }) => {
-  const prompt = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests })
-  const aiData = await callGemini(prompt)
-
+const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, interests, startDate }) => {
+  const prompt  = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })  
+  const aiData  = await callGemini(prompt)
+  
   validateAIRoadmap(aiData)
 
   const roadmap = await Roadmap.create({
@@ -142,16 +168,10 @@ const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, int
     skillLevel,
     duration,
     interests,
-    summary: aiData.summary || '',
-    phases: aiData.phases.map((phase, idx) => ({
-      title: phase.title,
-      order: phase.order ?? idx + 1,
-      description: phase.description || '',
-      skills: phase.skills.map((s) => ({
-        name: s.name,
-        completed: false,
-      })),
-    })),
+    summary:   aiData.summary   || '',
+    startDate: aiData.startDate ? new Date(aiData.startDate) : new Date(),
+    endDate:   aiData.endDate   ? new Date(aiData.endDate)   : null,
+    phases:    mapPhases(aiData.phases),
   })
 
   return roadmap
@@ -166,41 +186,28 @@ const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
     skillLevel:   existing.skillLevel,
     duration:     existing.duration,
     interests:    existing.interests,
+    startDate:    existing.startDate?.toISOString().split('T')[0],
     feedback,
   })
 
-  const aiData = await callGemini(prompt)
+  const aiData         = await callGemini(prompt)
   validateAIRoadmap(aiData)
 
-  // Preserve original completion state where skill names match
-  const previousSkills = existing.phases
-    .flatMap((p) => p.skills)
-    .reduce((map, skill) => {
-      map[skill.name.toLowerCase()] = skill.completed
-      return map
-    }, {})
+  const preservedSkills = buildPreservedSkills(existing.phases)
 
-  existing.summary = aiData.summary || existing.summary
-  existing.phases = aiData.phases.map((phase, idx) => ({
-    title: phase.title,
-    order: phase.order ?? idx + 1,
-    description: phase.description || '',
-    skills: phase.skills.map((s) => ({
-      name: s.name,
-      // Keep completed = true if this skill existed before
-      completed: previousSkills[s.name.toLowerCase()] ?? false,
-    })),
-  }))
+  existing.summary   = aiData.summary   || existing.summary
+  existing.startDate = aiData.startDate ? new Date(aiData.startDate) : existing.startDate
+  existing.endDate   = aiData.endDate   ? new Date(aiData.endDate)   : existing.endDate
+  existing.phases    = mapPhases(aiData.phases, preservedSkills)
 
   await existing.save()
   return existing
 }
 
-const getRoadmaps = async (userId) => {
-  return Roadmap.find({ user: userId, isActive: true })
-    .select('-phases')   // lighter list view — phases loaded on detail
+const getRoadmaps = async (userId) =>
+  Roadmap.find({ user: userId, isActive: true })
+    .select('targetCareer skillLevel duration summary startDate endDate createdAt')
     .sort({ createdAt: -1 })
-}
 
 const getRoadmapById = async (userId, roadmapId) => {
   const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId })
@@ -232,15 +239,51 @@ const updateSkillProgress = async (userId, roadmapId, phaseIndex, skillIndex, co
   const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId })
   if (!roadmap) throw new AppError(404, 'Roadmap not found')
 
-  const phase = roadmap.phases[phaseIndex]
-  if (!phase) throw new AppError(400, 'Invalid phase index')
+  const skill = roadmap.phases[phaseIndex]?.skills[skillIndex]
+  if (!skill) throw new AppError(400, 'Invalid phase or skill index')
 
-  const skill = phase.skills[skillIndex]
-  if (!skill) throw new AppError(400, 'Invalid skill index')
+  skill.completed  = completed
+  skill.completedAt = completed ? new Date() : null
 
-  skill.completed = completed
+  // Auto-complete all daily tasks when skill is marked complete
+  if (completed) {
+    skill.dailyTasks.forEach((t) => {
+      t.completed  = true
+      t.completedAt = t.completedAt || new Date()
+    })
+  }
+
   await roadmap.save()
+  return roadmap
+}
 
+const updateTaskProgress = async (userId, roadmapId, phaseIndex, skillIndex, taskIndex, completed) => {
+  const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId })
+  if (!roadmap) throw new AppError(404, 'Roadmap not found')
+
+  const skill = roadmap.phases[phaseIndex]?.skills[skillIndex]
+  if (!skill) throw new AppError(400, 'Invalid phase or skill index')
+
+  const task = skill.dailyTasks[taskIndex]
+  if (!task) throw new AppError(400, 'Invalid task index')
+
+  task.completed  = completed
+  task.completedAt = completed ? new Date() : null
+
+  // Auto-complete the skill if all its tasks are now done
+  const allDone = skill.dailyTasks.every((t) => t.completed)
+  if (allDone && !skill.completed) {
+    skill.completed  = true
+    skill.completedAt = new Date()
+  }
+
+  // Auto-uncomplete skill if a task is unchecked
+  if (!completed && skill.completed) {
+    skill.completed  = false
+    skill.completedAt = null
+  }
+
+  await roadmap.save()
   return roadmap
 }
 
@@ -252,4 +295,5 @@ module.exports = {
   updateRoadmap,
   deleteRoadmap,
   updateSkillProgress,
+  updateTaskProgress,
 }
