@@ -26,7 +26,6 @@ const callGemini = async (prompt, maxRetries = 2) => {
         systemInstruction: SYSTEM_INSTRUCTION,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       })
-      console.log(result);
       
       const raw = result.response.text()
       if (!raw?.trim()) throw new AppError(502, 'AI returned an empty response.')
@@ -160,7 +159,6 @@ const buildPreservedSkills = (existingPhases) => {
 const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, interests, startDate }) => {
   const prompt  = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })  
   const aiData  = await callGemini(prompt)
-  console.log(aiData);
   
   validateAIRoadmap(aiData)
 
