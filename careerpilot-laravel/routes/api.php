@@ -15,8 +15,13 @@ Route::get('/health', fn() => response()->json([
 Route::get('/skills',              [SkillController::class, 'index']);
 Route::get('/skills/categories',   [SkillController::class, 'categories']);
 Route::get('/skills/{id}',         [SkillController::class, 'show']);
-Route::get('/resources',           [ResourceController::class, 'index']);
-Route::get('/resources/{id}',      [ResourceController::class, 'show']);
+// Browse & filter
+Route::get('/resources',                    [ResourceController::class, 'index']);
+Route::get('/resources/recommended',        [ResourceController::class, 'recommended']);
+Route::get('/resources/{id}',               [ResourceController::class, 'show']);
+
+// Any authenticated user can rate
+Route::post('/resources/{id}/rate',         [ResourceController::class, 'rate']);
 
 // ─── Protected routes — require valid JWT (admin operations) ───────────────────
 Route::middleware('jwt.verify')->group(function () {
@@ -24,7 +29,11 @@ Route::middleware('jwt.verify')->group(function () {
     Route::put('/skills/{id}',        [SkillController::class, 'update']);
     Route::delete('/skills/{id}',     [SkillController::class, 'destroy']);
 
-    Route::post('/resources',         [ResourceController::class, 'store']);
-    Route::put('/resources/{id}',     [ResourceController::class, 'update']);
-    Route::delete('/resources/{id}',  [ResourceController::class, 'destroy']);
+    Route::post('/resources',                           [ResourceController::class, 'store']);
+        Route::put('/resources/{id}',                       [ResourceController::class, 'update']);
+        Route::delete('/resources/{id}',                    [ResourceController::class, 'destroy']);
+        Route::patch('/resources/{id}/deprecated',          [ResourceController::class, 'toggleDeprecated']);
+        Route::patch('/resources/{id}/verified',            [ResourceController::class, 'toggleVerified']);
+
+    
 });
