@@ -18,6 +18,7 @@ app.use('/api/auth', require('./modules/auth/auth.routes.js'));
 app.use('/api/roadmaps', require('./modules/roadmap/roadmap.routes.js'));
 app.use('/api/progress', require('./modules/progress/progress.routes.js'));
 app.use('/api/tasks', require('./modules/dailyTasks/dailyTask.routes.js'));
+app.use("/api/quizzes", require("./modules/quizzes/quiz.routes.js"));
 
 app.use(notFound);
 app.use(errorHandler);

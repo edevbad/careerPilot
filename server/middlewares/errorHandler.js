@@ -98,6 +98,11 @@ const errorHandler = (err, req, res, next) => {
     message    = err.message;
   }
 
+  if (err.statusCode === 429) {
+  return res.status(429).json(
+    new ApiResponse(429, { retakeAvailableAt: err.retakeAvailableAt }, err.message)
+  );
+
   // ── Generic 500 — scrub message in production to prevent info leakage ─────
   if (statusCode === 500 && process.env.NODE_ENV === 'production') {
     message = 'An unexpected error occurred. Please try again later.';
@@ -116,6 +121,9 @@ const errorHandler = (err, req, res, next) => {
   if (statusCode === 502) {
     message = message || 'AI service returned an unexpected response.'
   }
+
+  
+}
 
   const body = { success: false, message };
   if (errors) body.errors = errors;
