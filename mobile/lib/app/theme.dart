@@ -41,7 +41,7 @@ class AppTheme {
         labelLarge: GoogleFonts.inter(
             color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         margin: EdgeInsets.zero,

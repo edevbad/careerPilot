@@ -355,7 +355,8 @@ class _TFOptions extends StatelessWidget {
 class _TFBtn extends StatelessWidget {
   final String label;
   final IconData icon;
-  final bool value, selected;
+  final bool value;
+  final bool? selected;
   final ValueChanged<bool> onSelect;
   final Color color;
   const _TFBtn({required this.label, required this.icon, required this.value, required this.selected, required this.onSelect, required this.color});

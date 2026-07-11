@@ -13,9 +13,9 @@ import '../features/tasks/screens/tasks_screen.dart';
 import '../features/quiz/screens/quiz_hub_screen.dart';
 import '../features/quiz/screens/active_quiz_screen.dart';
 import '../features/quiz/screens/quiz_results_screen.dart';
-import '../features/resources/screens/resource_browse_screen.dart';
-import '../features/resources/screens/resource_detail_screen.dart';
-import '../features/profile/screens/profile_screen.dart';
+// import '../features/resources/screens/resource_browse_screen.dart';
+// import '../features/resources/screens/resource_detail_screen.dart';
+// import '../features/profile/screens/profile_screen.dart';
 import 'main_shell.dart';
 
 final GoRouter router = GoRouter(
@@ -112,29 +112,29 @@ final GoRouter router = GoRouter(
         ),
 
         // Branch 4 — Profile
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfileScreen(),
-            ),
-          ],
-        ),
+        // StatefulShellBranch(
+        //   routes: [
+        //     GoRoute(
+        //       path: '/profile',
+        //       builder: (context, state) => const ProfileScreen(),
+        //     ),
+        //   ],
+        // ),
       ],
     ),
 
-    // ── Resources (accessible from anywhere) ────────
-    GoRoute(
-      path: '/resources',
-      builder: (context, state) => const ResourceBrowseScreen(),
-      routes: [
-        GoRoute(
-          path: ':id',
-          builder: (context, state) => ResourceDetailScreen(
-            resourceId: state.pathParameters['id']!,
-          ),
-        ),
-      ],
-    ),
+    // // ── Resources (accessible from anywhere) ────────
+    // GoRoute(
+    //   path: '/resources',
+    //   builder: (context, state) => const ResourceBrowseScreen(),
+    //   routes: [
+    //     GoRoute(
+    //       path: ':id',
+    //       builder: (context, state) => ResourceDetailScreen(
+    //         resourceId: state.pathParameters['id']!,
+    //       ),
+    //     ),
+    //   ],
+    // ),
   ],
 );
