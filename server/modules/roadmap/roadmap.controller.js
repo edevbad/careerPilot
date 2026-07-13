@@ -1,23 +1,18 @@
-const {asyncHandler} = require('../../utils/asyncHandler')
-const ApiResponse  = require('../../utils/apiResponse')
+const {asyncHandler}   = require('../../utils/asyncHandler')
+const ApiResponse    = require('../../utils/apiResponse')
 const roadmapService = require('./roadmap.service')
 
-const generateRoadmap = asyncHandler(async (req, res) => {  
-  const { targetCareer, skillLevel, duration, interests } = req.body
+const generateRoadmap = asyncHandler(async (req, res) => {
+  const { targetCareer, skillLevel, duration, interests, startDate } = req.body
   const roadmap = await roadmapService.generateRoadmap(req.user._id, {
-    targetCareer,
-    skillLevel,
-    duration,
-    interests,
+    targetCareer, skillLevel, duration, interests, startDate,
   })
   res.status(201).json(new ApiResponse(201, { roadmap }, 'Roadmap generated successfully'))
 })
 
 const regenerateRoadmap = asyncHandler(async (req, res) => {
   const roadmap = await roadmapService.regenerateRoadmap(
-    req.user._id,
-    req.params.id,
-    { feedback: req.body.feedback }
+    req.user._id, req.params.id, { feedback: req.body.feedback }
   )
   res.status(200).json(new ApiResponse(200, { roadmap }, 'Roadmap regenerated successfully'))
 })
@@ -45,13 +40,17 @@ const deleteRoadmap = asyncHandler(async (req, res) => {
 const updateSkillProgress = asyncHandler(async (req, res) => {
   const { phaseIndex, skillIndex, completed } = req.body
   const roadmap = await roadmapService.updateSkillProgress(
-    req.user._id,
-    req.params.id,
-    phaseIndex,
-    skillIndex,
-    completed
+    req.user._id, req.params.id, phaseIndex, skillIndex, completed
   )
-  res.status(200).json(new ApiResponse(200, { roadmap }, 'Progress updated'))
+  res.status(200).json(new ApiResponse(200, { roadmap }, 'Skill progress updated'))
+})
+
+const updateTaskProgress = asyncHandler(async (req, res) => {
+  const { phaseIndex, skillIndex, taskIndex, completed } = req.body
+  const roadmap = await roadmapService.updateTaskProgress(
+    req.user._id, req.params.id, phaseIndex, skillIndex, taskIndex, completed
+  )
+  res.status(200).json(new ApiResponse(200, { roadmap }, 'Task progress updated'))
 })
 
 module.exports = {
@@ -62,4 +61,5 @@ module.exports = {
   updateRoadmap,
   deleteRoadmap,
   updateSkillProgress,
+  updateTaskProgress,
 }

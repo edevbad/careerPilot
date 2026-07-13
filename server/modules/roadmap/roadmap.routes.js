@@ -8,6 +8,7 @@ const {
   regenerateRoadmapValidator,
   updateRoadmapValidator,
   updateSkillProgressValidator,
+  updateTaskProgressValidator,
 } = require('./roadmap.validators')
 const {
   generateRoadmap,
@@ -17,40 +18,32 @@ const {
   updateRoadmap,
   deleteRoadmap,
   updateSkillProgress,
+  updateTaskProgress,
 } = require('./roadmap.controller')
 
 router.use(protect)
 
 router.post('/generate',
-  validate(generateRoadmapValidator),
-generateRoadmap
-)
+  validate(generateRoadmapValidator), generateRoadmap)
 
 router.post('/:id/regenerate',
-  validate([...mongoIdValidator('id'), ...regenerateRoadmapValidator]),
-  regenerateRoadmap
-)
+  validate([...mongoIdValidator('id'), ...regenerateRoadmapValidator]), regenerateRoadmap)
 
 router.get('/',    getRoadmaps)
 
 router.get('/:id',
-  validate(mongoIdValidator('id')),
-  getRoadmapById
-)
+  validate(mongoIdValidator('id')), getRoadmapById)
 
 router.put('/:id',
-  validate([...mongoIdValidator('id'), ...updateRoadmapValidator]),
-  updateRoadmap
-)
+  validate([...mongoIdValidator('id'), ...updateRoadmapValidator]), updateRoadmap)
 
 router.delete('/:id',
-  validate(mongoIdValidator('id')),
-  deleteRoadmap
-)
+  validate(mongoIdValidator('id')), deleteRoadmap)
 
-router.patch('/:id/progress',
-  validate([...mongoIdValidator('id'), ...updateSkillProgressValidator]),
-  updateSkillProgress
-)
+router.patch('/:id/skill-progress',
+  validate([...mongoIdValidator('id'), ...updateSkillProgressValidator]), updateSkillProgress)
+
+router.patch('/:id/task-progress',
+  validate([...mongoIdValidator('id'), ...updateTaskProgressValidator]), updateTaskProgress)
 
 module.exports = router

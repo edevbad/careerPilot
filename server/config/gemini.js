@@ -12,7 +12,7 @@ const getGeminiModel = () =>
     generationConfig: {
       temperature: 0.7,        // balanced creativity vs consistency
       topP: 0.9,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 12000,
     },
   })
 
