@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const taskService  = require("./dailyTask.service");
-const Roadmap      = require("../../models/Roadmap");
+const Roadmap      = require("../../models/roadmap.model");
 const ApiResponse  = require("../../utils/ApiResponse");
 
 // ── GET /tasks/today ───────────────────────────────────────────

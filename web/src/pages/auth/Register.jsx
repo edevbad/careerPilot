@@ -1,101 +1,139 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { registerUser } from "@/api/auth.api";
-import Input from "@/components/ui/Input";
-import Button from "@/components/ui/Button";
-import styles from "./Auth.module.css";
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import Button from '@/components/ui/Button'
+import styles from './Auth.module.css'
 
 export default function Register() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const { register } = useAuth()
+  
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [errors, setErrors] = useState({})
+  const [globalError, setGlobalError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.id]: e.target.value }));
+  const handleChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    setErrors(prev => ({ ...prev, [e.target.name]: '' }))
+    setGlobalError('')
+  }
 
   const validate = () => {
-    const errs = {};
-    if (!form.name.trim()) errs.name = "Name is required";
-    if (!form.email.trim()) errs.email = "Email is required";
-    if (form.password.length < 8)
-      errs.password = "Password must be at least 8 characters";
-    return errs;
-  };
+    const newErrors = {}
+    if (!formData.name.trim()) newErrors.name = 'Name is required'
+    if (!formData.email) newErrors.email = 'Email is required'
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email address'
+    if (!formData.password) newErrors.password = 'Password is required'
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
+    return newErrors
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setServerError("");
-    const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
+    e.preventDefault()
+    const validationErrors = validate()
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      return
     }
-    setErrors({});
-    setLoading(true);
+
+    setIsLoading(true)
     try {
-      const res = await registerUser(form);
-      const { accessToken, user } = res.data;
-      login(accessToken, user);
-      navigate("/assessment");
+      await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      })
+      navigate('/dashboard')
     } catch (err) {
-      setServerError(err.response?.data?.message || "Registration failed.");
+      setGlobalError(err.response?.data?.message || 'Registration failed. Please try again.')
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className={styles.wrapper}>
-      <h2 className={styles.title}>Create your account</h2>
-      <p className={styles.subtitle}>
-        Start building your career roadmap today.
-      </p>
+    <div className={`${styles.container} fade-in`}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Create Account</h1>
+        <p className={styles.subtitle}>Join CareerPilot and build your future</p>
+      </div>
 
-      {serverError && <div className={styles.alert}>{serverError}</div>}
+      {globalError && <div className={styles.globalError}>{globalError}</div>}
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        <Input
-          label="Full Name"
-          id="name"
-          placeholder="John Doe"
-          value={form.name}
-          onChange={handleChange}
-          error={errors.name}
-          required
-        />
-        <Input
-          label="Email"
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          value={form.email}
-          onChange={handleChange}
-          error={errors.email}
-          required
-        />
-        <Input
-          label="Password"
-          id="password"
-          type="password"
-          placeholder="Min. 8 characters"
-          value={form.password}
-          onChange={handleChange}
-          error={errors.password}
-          required
-        />
-        <Button type="submit" loading={loading} fullWidth>
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="name">Full Name</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="John Doe"
+            value={formData.name}
+            onChange={handleChange}
+            className={styles.input}
+            disabled={isLoading}
+          />
+          {errors.name && <span className={styles.errorText}>{errors.name}</span>}
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="email">Email Address</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            value={formData.email}
+            onChange={handleChange}
+            className={styles.input}
+            disabled={isLoading}
+          />
+          {errors.email && <span className={styles.errorText}>{errors.email}</span>}
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={handleChange}
+            className={styles.input}
+            disabled={isLoading}
+          />
+          {errors.password && <span className={styles.errorText}>{errors.password}</span>}
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="confirmPassword">Confirm Password</label>
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            placeholder="••••••••"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className={styles.input}
+            disabled={isLoading}
+          />
+          {errors.confirmPassword && <span className={styles.errorText}>{errors.confirmPassword}</span>}
+        </div>
+
+        <Button type="submit" isLoading={isLoading} className={`btn-primary ${styles.submitBtn}`}>
           Create Account
         </Button>
       </form>
 
-      <p className={styles.switchLink}>
-        Already have an account? <Link to="/login">Sign in</Link>
+      <p className={styles.footer}>
+        Already have an account? 
+        <Link to="/login" className={styles.footerLink}>Sign In</Link>
       </p>
     </div>
-  );
+  )
 }
