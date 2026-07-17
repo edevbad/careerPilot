@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 
+import '../../../core/repositories/roadmap_repository.dart';
+
 class GenerateRoadmapScreen extends StatefulWidget {
   const GenerateRoadmapScreen({super.key});
   @override
@@ -10,6 +12,7 @@ class GenerateRoadmapScreen extends StatefulWidget {
 }
 
 class _GenerateRoadmapScreenState extends State<GenerateRoadmapScreen> {
+  final _roadmapRepository = RoadmapRepository();
   final _pageCtrl = PageController();
   int _step = 0;
   bool _generating = false;
@@ -52,8 +55,29 @@ class _GenerateRoadmapScreenState extends State<GenerateRoadmapScreen> {
 
   Future<void> _generate() async {
     setState(() => _generating = true);
-    await Future.delayed(const Duration(milliseconds: 2500));
-    if (mounted) context.go('/roadmap/r1');
+    try {
+      String formatDate(DateTime d) =>
+          "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+      
+      final roadmap = await _roadmapRepository.generateRoadmap(
+        targetCareer: _goalCtrl.text.trim(),
+        skillLevel: _skillLevel,
+        duration: _duration,
+        interests: _interestsCtrl.text.trim(),
+        startDate: formatDate(_startDate ?? DateTime.now()),
+      );
+      if (mounted) {
+        // Pop and return true to refresh list screen, or go to details
+        context.go('/roadmap/${roadmap.id}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _generating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate roadmap: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   @override

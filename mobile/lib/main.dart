@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 
-void main() {
+import 'core/network/api_client.dart';
+import 'core/auth/auth_controller.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -11,6 +14,11 @@ void main() {
     systemNavigationBarColor: Color(0xFF0F1629),
     systemNavigationBarIconBrightness: Brightness.light,
   ));
+  
+  // Initialize APIs
+  await ApiClient.instance.init();
+  await AuthController.instance.initialize();
+  
   runApp(const CareerPilotApp());
 }
 

@@ -2,9 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/auth/auth_controller.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (AuthController.instance.isLoggedIn) {
+        context.go('/dashboard');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -206,3 +222,4 @@ class _GradientButton extends StatelessWidget {
     );
   }
 }
+
