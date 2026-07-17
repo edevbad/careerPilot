@@ -178,7 +178,7 @@ class _TasksScreenState extends State<TasksScreen> {
       body: RefreshIndicator(
         color: AppColors.primary,
         backgroundColor: AppColors.surface,
-        onRefresh: () async => await Future.delayed(const Duration(seconds: 1)),
+        onRefresh: _loadTasksData,
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -446,14 +446,19 @@ class _SectionHeader extends StatelessWidget {
 
 // ── Task Card ─────────────────────────────────────────
 class _TaskCard extends StatefulWidget {
-  final Map<String, dynamic> task;
+  final TaskModel task;
   final int taskIndex;
-  final VoidCallback onComplete, onSkip;
-  const _TaskCard(
-      {required this.task,
-      required this.taskIndex,
-      required this.onComplete,
-      required this.onSkip});
+  final VoidCallback onComplete;
+  final VoidCallback onSkip;
+
+  const _TaskCard({
+    super.key,
+    required this.task,
+    required this.taskIndex,
+    required this.onComplete,
+    required this.onSkip,
+  });
+
   @override
   State<_TaskCard> createState() => _TaskCardState();
 }
@@ -489,7 +494,7 @@ class _TaskCardState extends State<_TaskCard> {
 
   @override
   Widget build(BuildContext context) {
-    final type = widget.task['type'] as String;
+    final type = widget.task.taskType as String;
     return GestureDetector(
       onTap: () => setState(() => _expanded = !_expanded),
       child: Container(
@@ -516,17 +521,17 @@ class _TaskCardState extends State<_TaskCard> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text(widget.task['title'] as String,
+                    Text(widget.task.title as String,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
                             ?.copyWith(fontSize: 13, height: 1.3)),
                     const SizedBox(height: 5),
                     Row(children: [
-                      _MiniChip('~${widget.task['estimatedMinutes']} min',
+                      _MiniChip('~${widget.task.estimatedMinutes} min',
                           Icons.timer_outlined, AppColors.textMuted),
                       const SizedBox(width: 6),
-                      _MiniChip('+${widget.task['xpReward']} XP',
+                      _MiniChip('+${widget.task.xpReward} XP',
                           Icons.bolt_rounded, AppColors.xpGold),
                     ]),
                   ])),
@@ -547,7 +552,7 @@ class _TaskCardState extends State<_TaskCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Divider(color: AppColors.border),
-                          Text(widget.task['description'] as String,
+                          Text(widget.task.description as String,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -621,11 +626,15 @@ class _MiniChip extends StatelessWidget {
 
 // ── Done task row ──────────────────────────────────────
 class _DoneTaskRow extends StatelessWidget {
-  final Map<String, dynamic> task;
-  const _DoneTaskRow({required this.task});
+  final TaskModel task;
+
+  const _DoneTaskRow({
+    super.key,
+    required this.task,
+  });
   @override
   Widget build(BuildContext context) {
-    final skipped = task['skipped'] as bool;
+    final skipped = task.isSkipped as bool;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -638,7 +647,7 @@ class _DoneTaskRow extends StatelessWidget {
             color: skipped ? AppColors.textMuted : AppColors.success, size: 18),
         const SizedBox(width: 10),
         Expanded(
-            child: Text(task['title'] as String,
+            child: Text(task.title as String,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -650,7 +659,7 @@ class _DoneTaskRow extends StatelessWidget {
             decoration: BoxDecoration(
                 color: AppColors.xpGold.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6)),
-            child: Text('+${task['xpReward']} XP',
+            child: Text('+${task.xpReward} XP',
                 style: const TextStyle(
                     color: AppColors.xpGold,
                     fontSize: 10,
