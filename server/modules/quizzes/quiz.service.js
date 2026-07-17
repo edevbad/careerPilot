@@ -1,15 +1,98 @@
-const Anthropic  = require("@anthropic-ai/sdk");
 const axios      = require("axios");
-const QuizResult = require("../../models/QuizResult");
-const Roadmap    = require("../../models/Roadmap");
-const Progress   = require("../../models/Progress");
+const QuizResult = require("../../models/quizresult.model");
+const Roadmap    = require("../../models/roadmap.model");
+const Progress   = require("../../models/progress.model");
+const AppError = require("../../utils/appError");
+const { getGeminiModel } = require("../../config/gemini");
 
-const client = new Anthropic();
 
 // Laravel API base — Quiz Questions live there
 const LARAVEL_API = process.env.LARAVEL_API_URL || "http://localhost:8000/api";
 
 // ── Helpers ────────────────────────────────────────────────────
+
+// GEMINI HELPERS
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const parseRetryDelay = (msg, defaultMs = 15000) => {
+  const match = msg?.match(/retryDelay[^0-9]*(\d+)/);
+  return match ? parseInt(match[1], 10) * 1000 : defaultMs;
+};
+
+const callGemini = async (prompt, maxRetries = 2) => {
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      const model = getGeminiModel();
+
+      const result = await model.generateContent({
+        systemInstruction:
+          "You are an AI career coach that always responds with valid JSON only.",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+      });
+
+      const raw = result.response.text();
+
+      if (!raw?.trim()) {
+        throw new AppError(502, "AI returned an empty response.");
+      }
+
+      const cleaned = raw
+        .trim()
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        console.error("Unparseable Gemini response:", raw);
+        throw new AppError(502, "AI returned malformed JSON.");
+      }
+    } catch (err) {
+      const msg = err.message || "";
+      const is429 = msg.includes("429") || msg.includes("Too Many Requests");
+      const isQuota = msg.includes("quota");
+
+      if ((is429 || isQuota) && attempt < maxRetries) {
+        const delay = parseRetryDelay(msg, 20000);
+        console.warn(
+          `Gemini rate limit. Retrying in ${delay / 1000}s...`
+        );
+
+        await sleep(delay);
+        attempt++;
+        continue;
+      }
+
+      if (isQuota && msg.includes("limit: 0")) {
+        throw new AppError(
+          503,
+          "AI daily quota reached. Please try again tomorrow."
+        );
+      }
+
+      if (is429 || isQuota) {
+        throw new AppError(
+          429,
+          "AI service is busy. Please wait and try again."
+        );
+      }
+
+      if (err.statusCode) throw err;
+
+      throw new AppError(502, `AI service error: ${msg}`);
+    }
+  }
+};
 
 /**
  * Fetch questions from the Laravel question bank for a skill + phase.
@@ -42,54 +125,72 @@ async function fetchQuestionsForGrading(questionIds) {
  * Use Claude to generate AI-fallback questions when the bank has
  * fewer than the minimum required (10).
  */
-async function generateAIQuestions(phase, targetCareer, skillLevel, count) {
-  const prompt = `You are a technical quiz writer. Generate exactly ${count} quiz questions for a student learning ${targetCareer}.
+async function generateAIQuestions(
+  phase,
+  targetCareer,
+  skillLevel,
+  count
+) {
+  const prompt = `
+You are an expert technical quiz writer.
 
-Phase: ${phase.phaseNumber} — "${phase.title}"
-Sub-topics: ${(phase.subTopics || []).map(s => s.title).join(", ") || phase.title}
-Student Level: ${skillLevel}
+Generate EXACTLY ${count} quiz questions.
 
-Question type distribution:
-- 60% mcq (multiple choice, 4 options A/B/C/D)
-- 25% true-false
-- 15% code-review (show a code snippet, ask what it outputs or what's wrong)
+Career: ${targetCareer}
+Phase: ${phase.phaseNumber} - ${phase.title}
+Topics:
+${(phase.subTopics || []).map(s => s.title).join(", ") || phase.title}
+
+Student Level:
+${skillLevel}
+
+Question distribution:
+- 60% MCQ
+- 25% True/False
+- 15% Code Review
 
 Rules:
-- Questions must test understanding, not just memorisation
-- MCQ distractors must be plausible (not obviously wrong)
-- Code snippets must be short (≤10 lines) and language-appropriate
-- Explanations must clearly state WHY the answer is correct
 
-Respond ONLY with a valid JSON array, no markdown:
+- Respond ONLY with JSON.
+- No markdown.
+- No explanation.
+
+Return:
+
 [
   {
-    "questionText": "...",
-    "questionType": "mcq|true-false|code-review",
-    "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-    "correctAnswer": "A",
-    "explanation": "...",
-    "difficulty": "easy|medium|hard"
+    "questionText":"...",
+    "questionType":"mcq",
+    "options":{
+      "A":"...",
+      "B":"...",
+      "C":"...",
+      "D":"..."
+    },
+    "correctAnswer":"A",
+    "explanation":"...",
+    "difficulty":"easy"
   }
 ]
 
-For true-false: options = { "A": "True", "B": "False" }, correctAnswer = "A" or "B".
-For code-review: include the code snippet inside questionText.`;
+For true-false:
+options = {
+"A":"True",
+"B":"False"
+}
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 3000,
-    messages: [{ role: "user", content: prompt }],
-  });
+For code-review include the code snippet inside questionText.
+`;
 
-  const raw = response.content[0].text.trim();
-  const questions = JSON.parse(raw);
-  if (!Array.isArray(questions)) throw new Error("AI returned invalid question format");
+  const questions = await callGemini(prompt);
 
-  // Tag as AI-generated and assign temporary negative IDs
-  // so the grading layer knows not to look them up in Laravel
+  if (!Array.isArray(questions)) {
+    throw new AppError(502, "AI returned invalid question format.");
+  }
+
   return questions.slice(0, count).map((q, i) => ({
     ...q,
-    id: -(i + 1),         // Negative ID = AI-generated, not in DB
+    id: -(i + 1),
     isAiGenerated: true,
   }));
 }
@@ -97,30 +198,55 @@ For code-review: include the code snippet inside questionText.`;
 /**
  * Generate study suggestions for a failed attempt using Claude.
  */
-async function generateStudySuggestions(phase, wrongTopics, targetCareer) {
-  const prompt = `A student failed a quiz on Phase ${phase.phaseNumber} "${phase.title}" 
-while learning ${targetCareer}. They got these topics wrong: ${wrongTopics.join(", ")}.
+async function generateStudySuggestions(
+  phase,
+  wrongTopics,
+  targetCareer
+) {
+  const prompt = `
+A student failed a quiz.
 
-Give exactly 4 specific, actionable study suggestions to help them before they retake.
-Each suggestion should reference a concrete resource type or action (e.g. "Re-read the MDN docs on X", "Build a small example of Y").
+Career:
+${targetCareer}
 
-Respond ONLY with a JSON array of 4 strings:
-["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4"]`;
+Phase:
+${phase.phaseNumber} - ${phase.title}
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 400,
-    messages: [{ role: "user", content: prompt }],
-  });
+Incorrect Topics:
+${wrongTopics.join(", ")}
+
+Generate exactly FOUR study suggestions.
+
+Rules:
+
+- Respond ONLY with JSON.
+- No markdown.
+- No explanation.
+
+Example:
+
+[
+"Suggestion 1",
+"Suggestion 2",
+"Suggestion 3",
+"Suggestion 4"
+]
+`;
 
   try {
-    return JSON.parse(response.content[0].text.trim());
+    const suggestions = await callGemini(prompt);
+
+    if (!Array.isArray(suggestions)) {
+      throw new Error();
+    }
+
+    return suggestions.slice(0, 4);
   } catch {
     return [
-      `Review the sub-topics in Phase ${phase.phaseNumber}: ${phase.title}`,
-      "Re-attempt the daily reading tasks for this phase",
-      "Watch tutorial videos for topics you found difficult",
-      "Build a small project applying the concepts from this phase",
+      `Review the concepts from Phase ${phase.phaseNumber}: ${phase.title}`,
+      "Repeat the daily learning tasks for this phase.",
+      "Watch additional tutorials covering the weak topics.",
+      "Build a small practice project before attempting the quiz again.",
     ];
   }
 }

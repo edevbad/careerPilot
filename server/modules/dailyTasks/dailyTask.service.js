@@ -1,9 +1,9 @@
-const Anthropic = require("@anthropic-ai/sdk");
-const DailyTask = require("../../models/DailyTask");
-const Progress  = require("../../models/Progress");
-const User      = require("../../models/User");
+const DailyTask = require("../../models/dailytask.model");
+const Progress  = require("../../models/progress.model");
+const User      = require("../../models/user.model");
+const AppError = require("../../utils/appError");
+const { getGeminiModel } = require("../../config/gemini");
 
-const client = new Anthropic();
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -23,61 +23,154 @@ function dateRange(startDate, endDate) {
   return { start, end };
 }
 
+// GEMINI HELPERS
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const parseRetryDelay = (msg, defaultMs = 15000) => {
+  const match = msg?.match(/retryDelay[^0-9]*(\d+)/);
+  return match ? parseInt(match[1], 10) * 1000 : defaultMs;
+};
+
+const callGemini = async (prompt, maxRetries = 2) => {
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      const model = getGeminiModel();
+
+      const result = await model.generateContent({
+        systemInstruction:
+          "You are an AI career coach that always responds with valid JSON only.",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+      });
+
+      const raw = result.response.text();
+
+      if (!raw?.trim()) {
+        throw new AppError(502, "AI returned an empty response.");
+      }
+
+      const cleaned = raw
+        .trim()
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        console.error("Unparseable Gemini response:", raw);
+        throw new AppError(502, "AI returned malformed JSON.");
+      }
+    } catch (err) {
+      const msg = err.message || "";
+      const is429 = msg.includes("429") || msg.includes("Too Many Requests");
+      const isQuota = msg.includes("quota");
+
+      if ((is429 || isQuota) && attempt < maxRetries) {
+        const delay = parseRetryDelay(msg, 20000);
+        console.warn(
+          `Gemini rate limit. Retrying in ${delay / 1000}s...`
+        );
+
+        await sleep(delay);
+        attempt++;
+        continue;
+      }
+
+      if (isQuota && msg.includes("limit: 0")) {
+        throw new AppError(
+          503,
+          "AI daily quota reached. Please try again tomorrow."
+        );
+      }
+
+      if (is429 || isQuota) {
+        throw new AppError(
+          429,
+          "AI service is busy. Please wait and try again."
+        );
+      }
+
+      if (err.statusCode) throw err;
+
+      throw new AppError(502, `AI service error: ${msg}`);
+    }
+  }
+};
+
 // ── AI Task Generation ─────────────────────────────────────────
 
 /**
- * Calls Claude to generate daily tasks for a given phase.
+ * Calls Gemini to generate daily tasks for a given phase.
  * Returns a parsed array of task objects ready for DB insertion.
  */
-async function generateTasksWithAI({ targetCareer, phase, skillLevel, dailyStudyHours, skipPatterns }) {
-  const taskCount = dailyStudyHours <= 1 ? 3 : dailyStudyHours <= 2 ? 5 : 7;
+async function generateTasksWithAI({
+  targetCareer,
+  phase,
+  skillLevel,
+  dailyStudyHours,
+  skipPatterns,
+}) {
+  const taskCount =
+    dailyStudyHours <= 1 ? 3 :
+    dailyStudyHours <= 2 ? 5 : 7;
 
-  const prompt = `You are a career learning coach. Generate exactly ${taskCount} daily learning tasks for a student.
+  const prompt = `
+You are an expert career learning coach.
+
+Generate EXACTLY ${taskCount} learning tasks.
 
 Student Profile:
 - Target Career: ${targetCareer}
-- Current Phase: Phase ${phase.phaseNumber} — "${phase.title}"
-- Phase Summary: ${phase.summary || "No summary available"}
-- Sub-topics in this phase: ${(phase.subTopics || []).map(s => s.title).join(", ") || "General topics"}
+- Current Phase: ${phase.title}
+- Phase Summary: ${phase.summary || "No summary"}
+- Topics: ${(phase.subTopics || []).map(s => s.title).join(", ") || "General"}
 - Skill Level: ${skillLevel}
 - Daily Study Hours: ${dailyStudyHours}
 
-${skipPatterns.length > 0 ? `Tasks the student tends to skip (deprioritise these types): ${skipPatterns.join(", ")}` : ""}
+${
+  skipPatterns.length
+    ? `Avoid generating many tasks similar to these skipped categories: ${skipPatterns.join(", ")}`
+    : ""
+}
 
-Task type distribution (use these types only):
-- reading: for articles, docs (XP: 10)
-- video: for tutorials to watch (XP: 15)  
-- coding: for coding exercises and challenges (XP: 25)
-- mini-project: for building something small (XP: 50)
+Task Types:
+- reading
+- video
+- coding
+- mini-project
 
 Rules:
-- Tasks must directly relate to the current phase sub-topics
-- Each task must be completable within the student's daily study time
-- Titles must be specific and actionable (e.g. "Build a GET /users endpoint with Express")
-- Descriptions must be 2-3 sentences explaining exactly what to do
-- estimatedMinutes must be realistic given the task type
+- Respond ONLY with valid JSON.
+- No markdown.
+- No explanations.
+- Return an array only.
 
-Respond ONLY with a valid JSON array, no markdown, no explanation:
+Example:
+
 [
   {
-    "taskType": "reading|coding|video|mini-project",
-    "title": "...",
-    "description": "...",
-    "resourceUrl": "https://... or null",
-    "estimatedMinutes": 20
+    "taskType":"coding",
+    "title":"Build a REST API",
+    "description":"Create CRUD endpoints using Express.",
+    "resourceUrl":"https://...",
+    "estimatedMinutes":45
   }
-]`;
+]
+`;
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1500,
-    messages: [{ role: "user", content: prompt }],
-  });
+  const tasks = await callGemini(prompt);
 
-  const raw = response.content[0].text.trim();
-  const tasks = JSON.parse(raw);
-
-  if (!Array.isArray(tasks)) throw new Error("AI returned invalid task format");
+  if (!Array.isArray(tasks)) {
+    throw new AppError(502, "AI returned invalid task format.");
+  }
 
   return tasks.slice(0, taskCount);
 }
