@@ -1,4 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import QuizLayout from '@/layouts/QuizLayout'
+import QuizScreen from '@/pages/quiz/QuizScreen'
+import QuizResults from '@/pages/quiz/QuizResults'
 
 import PrivateRoute from './PrivateRoute'
 import PublicRoute from './PublicRoute'
@@ -51,6 +54,14 @@ export default function AppRouter() {
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
+
+      {/* Quiz — private but without the main app chrome */}
+      <Route element={<PrivateRoute />}>
+        <Route element={<QuizLayout />}>
+          <Route path="/roadmaps/:roadmapId/quiz/:phaseNumber" element={<QuizScreen />} />
+          <Route path="/roadmaps/:roadmapId/quiz/:phaseNumber/results" element={<QuizResults />} />
+        </Route>
+      </Route>
     </Routes>
   )
 }
