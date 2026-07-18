@@ -1,39 +1,55 @@
 .wrapper {
   display: flex;
   min-height: 100vh;
+  background: var(--color-bg);
 }
 
 .brandPanel {
   flex: 1;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent 40%),
+              radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.1), transparent 40%),
+              var(--color-bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  border-right: 1px solid var(--color-border);
 }
 
 .brandContent {
   text-align: center;
-  color: #fff;
 }
 
 .logo {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }
 
 .brandName {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.5px;
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  letter-spacing: -0.05em;
+  background: linear-gradient(135deg, #fff, var(--color-primary-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .tagline {
-  font-size: 1.1rem;
-  opacity: 0.85;
-  max-width: 280px;
+  font-size: 1.15rem;
+  color: var(--color-text-muted);
+  max-width: 320px;
   margin: 0 auto;
+  line-height: 1.6;
 }
 
 .formPanel {
@@ -42,23 +58,33 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: var(--color-surface);
+  position: relative;
+}
+
+.formPanel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.03), transparent 60%);
+  pointer-events: none;
 }
 
 .formContainer {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
+  position: relative;
+  z-index: 1;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .wrapper {
     flex-direction: column;
   }
   .brandPanel {
-    padding: 2rem 1rem;
-    min-height: 180px;
+    padding: 3rem 1.5rem;
+    min-height: 300px;
   }
-  .brandName {
-    font-size: 1.8rem;
+  .formPanel {
+    padding: 3rem 1.5rem;
   }
 }

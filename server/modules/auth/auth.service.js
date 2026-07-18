@@ -15,7 +15,7 @@ exports.login = async (email, password) => {
     if (!user) {
         throw new AppError(404, 'User not found');
     }
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await user.verifyPassword(password);
 
     if (!isMatch) {
         throw new AppError(401, 'Invalid credentials');
