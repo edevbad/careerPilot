@@ -1,60 +1,48 @@
 .navbar {
   height: var(--navbar-height);
-  background: rgba(15, 17, 26, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
+  padding: 0 1.5rem;
   position: sticky;
   top: 0;
-  z-index: 90;
-}
-
-.left {
-  display: flex;
-  align-items: center;
+  z-index: 50;
+  box-shadow: var(--shadow);
 }
 
 .greeting {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: var(--color-text-muted);
 }
 
 .greeting strong {
   color: var(--color-text);
-  font-weight: 600;
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .email {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-full);
 }
 
 .logoutBtn {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   background: transparent;
-  color: var(--color-error);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 0.4rem 1rem;
-  border-radius: var(--radius-full);
+  color: var(--color-text);
   font-size: 0.85rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background 0.15s;
 }
 
 .logoutBtn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: var(--color-error);
+  background: var(--color-bg);
 }

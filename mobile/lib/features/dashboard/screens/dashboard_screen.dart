@@ -26,7 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
         color: AppColors.primary,
-        backgroundColor: const Color.fromARGB(255, 144, 164, 220),
+        backgroundColor: AppColors.surface,
         onRefresh: () async => await Future.delayed(const Duration(seconds: 1)),
         child: CustomScrollView(
           slivers: [
@@ -63,11 +63,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.bolt_rounded, color: Color.fromARGB(255, 235, 222, 222), size: 16),
+                        const Icon(Icons.bolt_rounded, color: Colors.white, size: 16),
                         const SizedBox(width: 4),
                         Text('${user['xp']} XP',
                             style: const TextStyle(
-                                color: Color.fromARGB(255, 220, 192, 192), fontWeight: FontWeight.w700, fontSize: 13)),
+                                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -146,8 +146,8 @@ class _StreakCard extends StatelessWidget {
   Color _dotColor(String status) {
     switch (status) {
       case 'completed': return AppColors.success;
-      case 'partial': return const Color.fromARGB(255, 244, 221, 182);
-      case 'today': return const Color.fromARGB(255, 126, 128, 239);
+      case 'partial': return AppColors.xpGold;
+      case 'today': return AppColors.primary;
       default: return AppColors.surfaceVariant;
     }
   }
@@ -206,7 +206,7 @@ class _StreakCard extends StatelessWidget {
                             ),
                           ),
                           child: day['status'] == 'completed'
-                              ? const Icon(Icons.check_rounded, size: 14, color: Color.fromARGB(255, 22, 219, 153))
+                              ? const Icon(Icons.check_rounded, size: 14, color: AppColors.success)
                               : day['status'] == 'today'
                                   ? const Icon(Icons.star_rounded, size: 14, color: AppColors.primary)
                                   : null,

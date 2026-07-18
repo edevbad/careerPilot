@@ -1,106 +1,69 @@
-.container {
-  max-width: 440px;
+.wrapper {
   width: 100%;
-  margin: 0 auto;
-  padding: 3rem 2.5rem;
-  background: var(--color-surface);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 2.5rem;
 }
 
 .title {
-  font-size: 2rem;
-  font-weight: 800;
-  margin-bottom: 0.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--color-text);
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.4px;
 }
 
 .subtitle {
+  font-size: 0.9rem;
   color: var(--color-text-muted);
-  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
-.formGroup {
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.85rem;
+}
+
+.alert {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.switchLink {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-top: 1.5rem;
+}
+
+.successBox {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.input {
-  padding: 0.85rem 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: rgba(0, 0, 0, 0.2);
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: 1rem;
-  transition: all var(--transition-fast);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-primary-light);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.errorText {
-  color: var(--color-error);
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-}
-
-.globalError {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--color-error);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
+  align-items: center;
+  gap: 0.75rem;
   text-align: center;
-  margin-bottom: 1.5rem;
+  padding: 2rem 0;
 }
 
-.submitBtn {
-  margin-top: 1rem;
-  width: 100%;
-  padding: 1rem;
-  font-size: 1rem;
+.successBox span {
+  font-size: 2.5rem;
 }
 
-.footer {
-  margin-top: 2rem;
-  text-align: center;
-  font-size: 0.95rem;
+.successBox h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.successBox p {
   color: var(--color-text-muted);
-}
-
-.footerLink {
-  color: var(--color-primary-light);
-  font-weight: 600;
-  margin-left: 0.5rem;
-}
-
-.footerLink:hover {
-  text-decoration: underline;
+  font-size: 0.9rem;
 }

@@ -36,37 +36,37 @@ class AppColors {
 
   // ── Gradients ────────────────────────────────────
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color.fromARGB(255, 173, 174, 228), Color.fromARGB(255, 196, 183, 226)],
+    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient xpGradient = LinearGradient(
-    colors: [Color.fromARGB(255, 225, 181, 106), Color.fromARGB(255, 239, 68, 68)],
+    colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
 
   static const LinearGradient successGradient = LinearGradient(
-    colors: [Color.fromARGB(255, 16, 185, 129), Color.fromARGB(255, 5, 150, 105)],
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient bgGradient = LinearGradient(
-    colors: [Color.fromARGB(255, 8, 12, 24), Color.fromARGB(255, 13, 20, 37)],
+    colors: [Color(0xFF080C18), Color(0xFF0D1425)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient streakGradient = LinearGradient(
-    colors: [Color.fromARGB(255, 249, 115, 22), Color.fromARGB(255, 239, 68, 68)],
+    colors: [Color(0xFFF97316), Color(0xFFEF4444)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient roadmapGradient = LinearGradient(
-    colors: [Color.fromARGB(255, 6, 182, 212), Color.fromARGB(255, 99, 102, 241)],
+    colors: [Color(0xFF06B6D4), Color(0xFF6366F1)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
