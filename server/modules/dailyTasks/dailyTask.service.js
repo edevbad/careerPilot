@@ -3,6 +3,8 @@ const Progress  = require("../../models/progress.model");
 const User      = require("../../models/user.model");
 const AppError = require("../../utils/appError");
 const { getGeminiModel } = require("../../config/gemini");
+const { default: mongoose } = require("mongoose");
+
 
 
 // ── Helpers ────────────────────────────────────────────────────
