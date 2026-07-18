@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(Icons.rocket_launch_rounded,
-                              color: Colors.white, size: 18),
+                              color: Color.fromARGB(255, 212, 199, 199), size: 18),
                         ),
                         const SizedBox(width: 10),
                         ShaderMask(
