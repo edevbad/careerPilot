@@ -202,6 +202,8 @@ roadmapSchema.index({ userId: 1, targetCareer: 1 });
 
 // ── Virtual: active phase object ───────────────────────────────
 roadmapSchema.virtual("activePhase").get(function () {
+  if (!Array.isArray(this.phases)) return null;
+
   return this.phases.find((p) => p.phaseNumber === this.activePhaseNumber) || null;
 });
 
