@@ -1,13 +1,14 @@
-const AppError   = require('../../utils/appError')
-const Roadmap    = require('../../models/roadmap.model')
-const { getGeminiModel } = require('../../config/gemini')
+const AppError = require('../../utils/appError')
+const Roadmap  = require('../../models/roadmap.model')
+const Progress = require('../../models/progress.model')
 const {
   SYSTEM_INSTRUCTION,
   buildRoadmapPrompt,
   buildRegeneratePrompt,
 } = require('./roadmap.prompts')
+const { getGeminiModel } = require('../../config/gemini')
 
-// ─── Gemini Caller ─────────────────────────────────────────────────────────────
+// ─── Gemini Caller (unchanged) ──────────────────────────────────────────────
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -26,7 +27,7 @@ const callGemini = async (prompt, maxRetries = 2) => {
         systemInstruction: SYSTEM_INSTRUCTION,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       })
-      
+
       const raw = result.response.text()
       if (!raw?.trim()) throw new AppError(502, 'AI returned an empty response.')
 
@@ -60,17 +61,14 @@ const callGemini = async (prompt, maxRetries = 2) => {
         throw new AppError(503, 'AI daily quota reached. Please try again tomorrow.')
       }
 
-      if (is429 || isQuota) {
-        throw new AppError(429, 'AI service is busy. Please wait and try again.')
-      }
-
+      if (is429 || isQuota) throw new AppError(429, 'AI service is busy. Please wait and try again.')
       if (err.statusCode) throw err
       throw new AppError(502, `AI service error: ${msg}`)
     }
   }
 }
 
-// ─── Validator ─────────────────────────────────────────────────────────────────
+// ─── Validator ──────────────────────────────────────────────────────────────
 
 const validateAIRoadmap = (data) => {
   if (!Array.isArray(data.phases) || data.phases.length === 0) {
@@ -78,146 +76,195 @@ const validateAIRoadmap = (data) => {
   }
 
   for (const phase of data.phases) {
-    if (!phase.title || !Array.isArray(phase.skills) || phase.skills.length === 0) {
-      throw new AppError(502, 'AI returned a phase with missing title or skills.')
+    if (!phase.title) {
+      throw new AppError(502, 'AI returned a phase with a missing title.')
     }
-
-    for (const skill of phase.skills) {
-      if (!skill.name || typeof skill.name !== 'string') {
-        throw new AppError(502, 'AI returned a skill with missing name.')
-      }
-      if (!Array.isArray(skill.dailyTasks) || skill.dailyTasks.length === 0) {
-        throw new AppError(502, `AI returned skill "${skill.name}" with no daily tasks.`)
-      }
+    if (!phase.difficulty || !['Beginner', 'Intermediate', 'Advanced'].includes(phase.difficulty)) {
+      throw new AppError(502, `AI returned an invalid difficulty for phase "${phase.title}".`)
+    }
+    if (!Array.isArray(phase.learningObjectives) || phase.learningObjectives.length === 0) {
+      throw new AppError(502, `AI returned phase "${phase.title}" with no learning objectives.`)
+    }
+    if (!Array.isArray(phase.subTopics) || phase.subTopics.length === 0) {
+      throw new AppError(502, `AI returned phase "${phase.title}" with no sub-topics.`)
     }
   }
 }
 
-// ─── Map AI Output → DB Shape ──────────────────────────────────────────────────
+// ─── Map AI output → DB shape ────────────────────────────────────────────────
+// Preserves status/unlockedAt/completedAt for phases that already existed (regenerate)
 
-const mapPhases = (aiPhases, preservedSkills = {}) =>
-  aiPhases.map((phase, idx) => ({
-    title:       phase.title,
-    order:       phase.order ?? idx + 1,
-    description: phase.description || '',
-    startDate:   phase.startDate ? new Date(phase.startDate) : null,
-    endDate:     phase.endDate   ? new Date(phase.endDate)   : null,
-    skills: (phase.skills || []).map((s) => {
-      const key       = s.name.toLowerCase()
-      const preserved = preservedSkills[key] || {}
+const mapPhases = (aiPhases, preservedPhases = {}) =>
+  aiPhases.map((phase, idx) => {
+    const phaseNum  = phase.phaseNumber ?? idx + 1
+    const preserved = preservedPhases[phaseNum] || {}
 
-      return {
-        name:          s.name,
-        description:   s.description  || '',
-        estimatedDays: s.estimatedDays || 7,
-        startDate:     s.startDate ? new Date(s.startDate) : null,
-        endDate:       s.endDate   ? new Date(s.endDate)   : null,
-        // Preserve completion if skill existed before (on regenerate)
-        completed:     preserved.completed  ?? false,
-        completedAt:   preserved.completedAt ?? null,
-        dailyTasks: (s.dailyTasks || []).map((t, tIdx) => ({
-          day:         t.day ?? tIdx + 1,
-          title:       t.title       || `Day ${t.day ?? tIdx + 1} Task`,
-          description: t.description || '',
-          // Preserve task completion on regenerate
-          completed:   preserved.tasks?.[t.day] ?? false,
-          completedAt: preserved.taskDates?.[t.day] ?? null,
-        })),
-      }
-    }),
-  }))
+    return {
+      phaseNumber:      phaseNum,
+      title:            phase.title,
+      summary:          phase.summary          || '',
+      difficulty:       phase.difficulty,
+      estimatedWeeks:   phase.estimatedWeeks   ?? 2,
+      prerequisites:    phase.prerequisites    ?? (phaseNum > 1 ? [phaseNum - 1] : []),
+      learningObjectives: (phase.learningObjectives || []).filter(Boolean),
+      subTopics: (phase.subTopics || []).map((s, sIdx) => ({
+        order:       s.order       ?? sIdx + 1,
+        title:       s.title,
+        description: s.description || '',
+      })),
+      // Preserve phase lifecycle fields on regenerate
+      status:               preserved.status      ?? 'locked',
+      unlockedAt:           preserved.unlockedAt  ?? null,
+      completedAt:          preserved.completedAt ?? null,
+      skillCompletionPercent: preserved.skillCompletionPercent ?? 0,
+      quizRequired:         preserved.quizRequired         ?? true,
+      quizPassingScore:     preserved.quizPassingScore     ?? 70,
+    }
+  })
 
-// Build a lookup map of previous skill completion state for regeneration
-const buildPreservedSkills = (existingPhases) => {
+// Build a lookup of existing phase state keyed by phaseNumber (for regenerate)
+const buildPreservedPhases = (existingPhases) => {
   const map = {}
-
   for (const phase of existingPhases) {
-    for (const skill of phase.skills) {
-      const key    = skill.name.toLowerCase()
-      const tasks  = {}
-      const dates  = {}
-
-      for (const t of skill.dailyTasks || []) {
-        tasks[t.day]  = t.completed
-        dates[t.day]  = t.completedAt
-      }
-
-      map[key] = {
-        completed:   skill.completed,
-        completedAt: skill.completedAt,
-        tasks,
-        dates,
-      }
+    map[phase.phaseNumber] = {
+      status:                 phase.status,
+      unlockedAt:             phase.unlockedAt,
+      completedAt:            phase.completedAt,
+      skillCompletionPercent: phase.skillCompletionPercent,
+      quizRequired:           phase.quizRequired,
+      quizPassingScore:       phase.quizPassingScore,
     }
   }
-
   return map
 }
 
-// ─── Service Functions ─────────────────────────────────────────────────────────
+// ─── Service Functions ───────────────────────────────────────────────────────
 
 const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, interests, startDate }) => {
-  const prompt  = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })  
-  const aiData  = await callGemini(prompt)
-  
+  const prompt = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })
+  const aiData = await callGemini(prompt)
   validateAIRoadmap(aiData)
 
+  const phases = mapPhases(aiData.phases)
+  // Phase 1 is always unlocked immediately — the pre-save hook also does this
+  // but we set it here explicitly so the returned object is correct before save
+  if (phases.length > 0) {
+    phases[0].status     = 'active'
+    phases[0].unlockedAt = new Date()
+  }
+
   const roadmap = await Roadmap.create({
-    user: userId,
+    userId,
     targetCareer,
     skillLevel,
-    duration,
-    interests,
-    summary:   aiData.summary   || '',
-    startDate: aiData.startDate ? new Date(aiData.startDate) : new Date(),
-    endDate:   aiData.endDate   ? new Date(aiData.endDate)   : null,
-    phases:    mapPhases(aiData.phases),
+    summary:  aiData.summary || '',
+    phases,
+  })
+
+  // Seed a Progress document so the daily task and quiz services
+  // have somewhere to write results immediately after creation
+  await Progress.create({
+    userId,
+    roadmapId: roadmap._id,
+    phaseProgress: roadmap.phases.map((p) => ({
+      phaseNumber:       p.phaseNumber,
+      skills:            [],
+      completionPercent: 0,
+      latestQuizScore:   null,
+      quizPassed:        false,
+    })),
   })
 
   return roadmap
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+
 const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
-  const existing = await Roadmap.findOne({ _id: roadmapId, user: userId })
+  const existing = await Roadmap.findOne({ _id: roadmapId, userId })
   if (!existing) throw new AppError(404, 'Roadmap not found')
 
+  // Tell the AI which phases are already completed so it doesn't touch them
+  const completedPhaseNumbers = existing.phases
+    .filter((p) => p.status === 'completed')
+    .map((p) => p.phaseNumber)
+
   const prompt = buildRegeneratePrompt({
-    targetCareer: existing.targetCareer,
-    skillLevel:   existing.skillLevel,
-    duration:     existing.duration,
-    interests:    existing.interests,
-    startDate:    existing.startDate?.toISOString().split('T')[0],
+    targetCareer:          existing.targetCareer,
+    skillLevel:            existing.skillLevel,
+    duration:              existing.duration,
+    interests:             existing.interests,
+    startDate:             existing.startDate?.toISOString().split('T')[0],
     feedback,
+    completedPhaseNumbers,
   })
 
-  const aiData         = await callGemini(prompt)
+  const aiData = await callGemini(prompt)
   validateAIRoadmap(aiData)
 
-  const preservedSkills = buildPreservedSkills(existing.phases)
+  // Preserve lifecycle state for all existing phases
+  const preservedPhases = buildPreservedPhases(existing.phases)
+  const newPhases       = mapPhases(aiData.phases, preservedPhases)
 
-  existing.summary   = aiData.summary   || existing.summary
-  existing.startDate = aiData.startDate ? new Date(aiData.startDate) : existing.startDate
-  existing.endDate   = aiData.endDate   ? new Date(aiData.endDate)   : existing.endDate
-  existing.phases    = mapPhases(aiData.phases, preservedSkills)
+  // Ensure phase 1 is still active if it wasn't completed
+  if (newPhases.length > 0 && newPhases[0].status === 'locked') {
+    newPhases[0].status     = 'active'
+    newPhases[0].unlockedAt = existing.phases[0]?.unlockedAt ?? new Date()
+  }
+
+  existing.summary = aiData.summary || existing.summary
+  existing.phases  = newPhases
 
   await existing.save()
+
+  // Rebuild phaseProgress entries in Progress for any new phases
+  // (completed phases keep their existing progress entries)
+  const progress = await Progress.findOne({ userId, roadmapId })
+  if (progress) {
+    const existingPhaseNums = new Set(progress.phaseProgress.map((p) => p.phaseNumber))
+
+    for (const phase of newPhases) {
+      if (!existingPhaseNums.has(phase.phaseNumber)) {
+        progress.phaseProgress.push({
+          phaseNumber:       phase.phaseNumber,
+          skills:            [],
+          completionPercent: 0,
+          latestQuizScore:   null,
+          quizPassed:        false,
+        })
+      }
+    }
+
+    await progress.save()
+  }
+
   return existing
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+
 const getRoadmaps = async (userId) =>
-  Roadmap.find({ user: userId, isActive: true })
-    .select('targetCareer skillLevel duration summary startDate endDate createdAt')
+  Roadmap.find({ userId, status: { $ne: 'archived' } })
+    .select('targetCareer skillLevel summary status completionPercent activePhaseNumber totalEstimatedWeeks createdAt')
     .sort({ createdAt: -1 })
 
+// ────────────────────────────────────────────────────────────────────────────
+
 const getRoadmapById = async (userId, roadmapId) => {
-  const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId })
+  const roadmap = await Roadmap.findOne({ _id: roadmapId, userId })
   if (!roadmap) throw new AppError(404, 'Roadmap not found')
   return roadmap
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+
 const updateRoadmap = async (userId, roadmapId, updates) => {
+  // Prevent altering fields that are managed by the system
+  const PROTECTED = ['userId', 'phases', 'status', 'completionPercent', 'activePhaseNumber', 'generatedBy']
+  for (const key of PROTECTED) delete updates[key]
+
   const roadmap = await Roadmap.findOneAndUpdate(
-    { _id: roadmapId, user: userId },
+    { _id: roadmapId, userId },
     { $set: updates },
     { new: true, runValidators: true }
   )
@@ -225,67 +272,67 @@ const updateRoadmap = async (userId, roadmapId, updates) => {
   return roadmap
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+
 const deleteRoadmap = async (userId, roadmapId) => {
   const roadmap = await Roadmap.findOneAndUpdate(
-    { _id: roadmapId, user: userId },
-    { isActive: false },
+    { _id: roadmapId, userId },
+    { status: 'archived' },
     { new: true }
   )
   if (!roadmap) throw new AppError(404, 'Roadmap not found')
+
+  // Cancel any pending daily tasks for this roadmap
+  // (don't delete — they are part of the user's history)
+  const DailyTask = require('../../models/DailyTask')
+  await DailyTask.updateMany(
+    { userId, roadmapId, status: 'pending' },
+    { status: 'skipped', skipReason: 'other' }
+  )
+
   return roadmap
 }
 
-const updateSkillProgress = async (userId, roadmapId, phaseIndex, skillIndex, completed) => {
-  const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId })
+// ────────────────────────────────────────────────────────────────────────────
+// Phase skill completion — updates the phase's skillCompletionPercent
+// The caller passes how many skills are done out of total for that phase.
+// This is called by the frontend skill checklist (individual skill toggles
+// still live in the daily task service for task-level completion).
+
+const updatePhaseSkillCompletion = async (userId, roadmapId, phaseNumber, { completedCount, totalCount }) => {
+  const roadmap = await Roadmap.findOne({ _id: roadmapId, userId })
   if (!roadmap) throw new AppError(404, 'Roadmap not found')
 
-  const skill = roadmap.phases[phaseIndex]?.skills[skillIndex]
-  if (!skill) throw new AppError(400, 'Invalid phase or skill index')
+  const phase = roadmap.phases.find((p) => p.phaseNumber === phaseNumber)
+  if (!phase) throw new AppError(400, `Phase ${phaseNumber} not found on this roadmap`)
 
-  skill.completed  = completed
-  skill.completedAt = completed ? new Date() : null
+  if (phase.status === 'locked') {
+    throw new AppError(400, 'Cannot update progress on a locked phase')
+  }
 
-  // Auto-complete all daily tasks when skill is marked complete
-  if (completed) {
-    skill.dailyTasks.forEach((t) => {
-      t.completed  = true
-      t.completedAt = t.completedAt || new Date()
-    })
+  const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  phase.skillCompletionPercent = percent
+
+  // Auto-mark phase as completed if all skills done AND quiz not required
+  if (percent === 100 && !phase.quizRequired) {
+    roadmap.unlockNextPhase()
+  }
+
+  // Sync into Progress collection
+  const progress = await Progress.findOne({ userId, roadmapId })
+  if (progress) {
+    const phaseEntry = progress.phaseProgress.find((p) => p.phaseNumber === phaseNumber)
+    if (phaseEntry) {
+      phaseEntry.completionPercent = percent
+    }
+    await progress.save()
   }
 
   await roadmap.save()
   return roadmap
 }
 
-const updateTaskProgress = async (userId, roadmapId, phaseIndex, skillIndex, taskIndex, completed) => {
-  const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId })
-  if (!roadmap) throw new AppError(404, 'Roadmap not found')
-
-  const skill = roadmap.phases[phaseIndex]?.skills[skillIndex]
-  if (!skill) throw new AppError(400, 'Invalid phase or skill index')
-
-  const task = skill.dailyTasks[taskIndex]
-  if (!task) throw new AppError(400, 'Invalid task index')
-
-  task.completed  = completed
-  task.completedAt = completed ? new Date() : null
-
-  // Auto-complete the skill if all its tasks are now done
-  const allDone = skill.dailyTasks.every((t) => t.completed)
-  if (allDone && !skill.completed) {
-    skill.completed  = true
-    skill.completedAt = new Date()
-  }
-
-  // Auto-uncomplete skill if a task is unchecked
-  if (!completed && skill.completed) {
-    skill.completed  = false
-    skill.completedAt = null
-  }
-
-  await roadmap.save()
-  return roadmap
-}
+// ────────────────────────────────────────────────────────────────────────────
 
 module.exports = {
   generateRoadmap,
@@ -294,6 +341,5 @@ module.exports = {
   getRoadmapById,
   updateRoadmap,
   deleteRoadmap,
-  updateSkillProgress,
-  updateTaskProgress,
+  updatePhaseSkillCompletion,  // replaces updateSkillProgress + updateTaskProgress
 }

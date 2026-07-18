@@ -1,6 +1,6 @@
 const asyncHandler  = require("express-async-handler");
 const quizService   = require("./quiz.service");
-const ApiResponse   = require("../../utils/ApiResponse");
+const ApiResponse   = require("../../utils/apiResponse");
 
 // ── GET /quizzes/:roadmapId/phase/:phaseNumber ─────────────────
 /**

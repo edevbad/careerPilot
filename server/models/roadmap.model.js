@@ -237,7 +237,7 @@ roadmapSchema.methods.unlockNextPhase = function () {
 };
 
 // ── Pre-save: compute totalEstimatedWeeks & first phase unlock ─
-roadmapSchema.pre("save", function (next) {
+roadmapSchema.pre("save", function () {
   if (this.isNew) {
     // Unlock phase 1 on creation
     if (this.phases.length > 0) {
@@ -250,8 +250,6 @@ roadmapSchema.pre("save", function (next) {
     (sum, p) => sum + (p.estimatedWeeks || 0),
     0
   );
-
-  next();
 });
 
 module.exports = mongoose.model("Roadmap", roadmapSchema);
