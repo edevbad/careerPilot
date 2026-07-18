@@ -1,4 +1,4 @@
-const asyncHandler = require("../../utils/asyncHandler");
+const {asyncHandler} = require("../../utils/asyncHandler");
 const quizService   = require("./quiz.service");
 const ApiResponse   = require("../../utils/apiResponse");
 
