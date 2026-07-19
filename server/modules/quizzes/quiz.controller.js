@@ -1,4 +1,4 @@
-const asyncHandler  = require("express-async-handler");
+const {asyncHandler}  = require("../../utils/asyncHandler");
 const quizService   = require("./quiz.service");
 const ApiResponse   = require("../../utils/apiResponse");
 

@@ -1,4 +1,4 @@
-const asyncHandler = require("express-async-handler");
+const {asyncHandler} = require("../../utils/asyncHandler");
 const taskService  = require("./dailyTask.service");
 const Roadmap      = require("../../models/roadmap.model");
 const ApiResponse  = require("../../utils/apiResponse");
