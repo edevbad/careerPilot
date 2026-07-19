@@ -22,6 +22,7 @@ import Progress from '@/pages/progress/Progress'
 import Resources from '@/pages/resources/Resources'
 import Profile from '@/pages/profile/Profile'
 import NotFound from '@/pages/NotFound'
+import Landing from '@/pages/marketing/Landing'
 
 export default function AppRouter() {
   return (
@@ -62,6 +63,11 @@ export default function AppRouter() {
           <Route path="/roadmaps/:roadmapId/quiz/:phaseNumber/results" element={<QuizResults />} />
         </Route>
       </Route>
+   
+
+// Replace the current root redirect:
+// <Route path="/" element={<Navigate to="/dashboard" replace />} />
+<Route path="/" element={<Landing />} />
     </Routes>
   )
 }

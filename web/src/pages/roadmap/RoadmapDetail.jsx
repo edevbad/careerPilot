@@ -277,7 +277,10 @@ export default function RoadmapDetail() {
           />
         ))}
       </div>
-
+          <Link to={`/roadmaps/${roadmap._id}/quiz/${phase.order}`}>
+    <Button>Take Quiz</Button>
+        </Link>
     </div>
+    
   )
 }
