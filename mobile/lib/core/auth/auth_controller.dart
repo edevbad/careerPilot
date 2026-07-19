@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 import '../storage/auth_storage.dart';
+import '../network/app_exception.dart';
 
 class AuthController extends ChangeNotifier {
   AuthController._();
@@ -18,19 +19,25 @@ class AuthController extends ChangeNotifier {
   Future<void> initialize() async {
     if (_initialized) return;
     try {
+      // 1. Restore cached user immediately so splash can navigate
       final cachedUser = await AuthStorage.getUserJson();
       if (cachedUser != null) {
         _currentUser = UserModel.fromJsonString(cachedUser);
         notifyListeners();
       }
-      
-      // Silently try refresh-token to see if session is still valid
+
+      // 2. Silently refresh session to get a fresh token
       final authResponse = await _authRepository.refreshToken();
       _currentUser = authResponse.user;
+    } on ApiException catch (e) {
+      // Only clear the session for true auth failures (401/403)
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        _currentUser = null;
+        await AuthStorage.clear();
+      }
+      // For any other API error (500, etc.) or network error, keep cached user
     } catch (_) {
-      // If error occurs, keep cached user as guest or clear if needed.
-      // API client automatically clears stored token on 401.
-      _currentUser = null;
+      // Network/timeout errors — keep cached user, app can still work offline
     } finally {
       _initialized = true;
       notifyListeners();
@@ -45,6 +52,12 @@ class AuthController extends ChangeNotifier {
 
   void setCurrentUser(UserModel? user) {
     _currentUser = user;
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    _currentUser = null;
+    await AuthStorage.clear();
     notifyListeners();
   }
 }

@@ -98,14 +98,15 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
     if (action == 'delete') {
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
+        useRootNavigator: true,
+        builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.surface,
           title: const Text('Delete Roadmap?', style: TextStyle(color: AppColors.textPrimary)),
           content: const Text('Are you sure you want to delete this roadmap? This action cannot be undone.', style: TextStyle(color: AppColors.textSecondary)),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
               child: const Text('Delete', style: TextStyle(color: Colors.white)),
             ),
@@ -130,7 +131,8 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
       final feedbackCtrl = TextEditingController();
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
+        useRootNavigator: true,
+        builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.surface,
           title: const Text('Regenerate Roadmap', style: TextStyle(color: AppColors.textPrimary)),
           content: TextField(
@@ -140,9 +142,9 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Regenerate', style: TextStyle(color: Colors.white)),
             ),

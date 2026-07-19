@@ -57,20 +57,14 @@ class AuthRepository {
     }
   }
 
+  /// Refresh the access token using the httpOnly refreshToken cookie.
+  /// Uses an isolated Dio (via [ApiClient.createRefreshDio]) to avoid
+  /// triggering the main dio's 401 interceptor and causing an infinite loop.
   Future<AuthResponseModel> refreshToken() async {
     try {
-      // Create isolated Dio request to avoid authorization interceptor looping
-      final refreshDio = Dio(BaseOptions(
-        baseUrl: ApiClient.baseUrl,
-        headers: {'Content-Type': 'application/json'},
-      ));
-      // Read cookies using a clean instance
-      refreshDio.interceptors.add(
-        _dio.interceptors.firstWhere((i) => i is InterceptorsWrapper)
-      ); // Just sharing token store if needed, but cookies are key here.
-      // Wait, let's just make sure cookies are passed by copying interceptors or using the same client
-      // Let's use the main dio client but target the raw path or let ApiClient interceptor handle it
-      final response = await _dio.post('/auth/refresh-token');
+      // Use the isolated refresh Dio — no auth interceptor, but has cookie jar
+      final refreshDio = ApiClient.instance.createRefreshDio();
+      final response = await refreshDio.post('/auth/refresh-token');
       final authResponse = AuthResponseModel.fromJson(
         response.data['data'] as Map<String, dynamic>,
       );

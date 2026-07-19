@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
@@ -48,26 +49,29 @@ class ApiClient {
         },
         onError: (err, handler) async {
           if (err.response?.statusCode == 401) {
-            // Attempt silent token refresh
+            // Attempt silent token refresh using an isolated Dio with the cookie jar
+            // CRITICAL: Do NOT use the main `dio` here — that would cause infinite 401 loops.
             try {
-              final refreshDio = Dio(BaseOptions(
-                baseUrl: baseUrl,
-                headers: {'Content-Type': 'application/json'},
-              ));
-              refreshDio.interceptors.add(CookieManager(_cookieJar));
-
+              final refreshDio = createRefreshDio();
               final refreshResponse = await refreshDio.post('/auth/refresh-token');
-              final newToken =
-                  refreshResponse.data['data']['accessToken'] as String?;
+              final data = refreshResponse.data['data'] as Map<String, dynamic>?;
+              final newToken = data?['accessToken'] as String?;
+
               if (newToken != null) {
                 await AuthStorage.saveAccessToken(newToken);
-                // Retry original request with new token
+
+                // Also persist the updated user JSON if present
+                if (data?['user'] != null) {
+                  await AuthStorage.saveUserJson(jsonEncode(data!['user']));
+                }
+
+                // Retry the original request with the new token
                 err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
                 final retryResponse = await dio.fetch(err.requestOptions);
                 return handler.resolve(retryResponse);
               }
             } catch (_) {
-              // Refresh failed — clear stored credentials
+              // Refresh failed — clear stored credentials so the app redirects to login
               await AuthStorage.clear();
             }
           }
@@ -94,5 +98,19 @@ class ApiClient {
   /// Clears all stored cookies (called on logout)
   Future<void> clearCookies() async {
     await _cookieJar.deleteAll();
+  }
+
+  /// Returns a fresh isolated Dio with the cookie jar but NO auth interceptor.
+  /// Use this for token-refresh calls to avoid infinite 401 retry loops.
+  Dio createRefreshDio() {
+    final refreshDio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {'Content-Type': 'application/json'},
+    ));
+    // CRITICAL: add the PersistCookieJar so the refreshToken cookie is sent
+    refreshDio.interceptors.add(CookieManager(_cookieJar));
+    return refreshDio;
   }
 }
