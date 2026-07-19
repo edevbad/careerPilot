@@ -6,6 +6,7 @@ const { getGeminiModel } = require("../../config/gemini");
 const { default: mongoose } = require("mongoose");
 
 
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function todayRange() {
