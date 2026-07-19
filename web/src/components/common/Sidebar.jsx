@@ -146,8 +146,8 @@ export default function Sidebar() {
           </svg>
         </div>
         <div className={styles.logoText}>
-          <span className={styles.logoPrimary}>Anti-Gravity</span>
-          <span className={styles.logoSub}>CareerPilot</span>
+          <span className={styles.logoPrimary}>CareelPilot</span>
+          {/* <span className={styles.logoSub}>CareerPilot</span> */}
         </div>
       </div>
 
@@ -185,8 +185,8 @@ export default function Sidebar() {
           </div>
         </div>
         <div className={styles.profileInfo}>
-          <span className={styles.profileName}>{user?.name || 'Astronaut'}</span>
-          <span className={styles.profileRole}>{user?.email || 'Explorer'}</span>
+          <span className={styles.profileName}>{user?.name || ''}</span>
+          <span className={styles.profileRole}>{user?.email || ''}</span>
         </div>
         <NavLink to="/profile" className={styles.profileSettingsBtn} aria-label="Settings">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
