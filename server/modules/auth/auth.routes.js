@@ -10,6 +10,7 @@ const router = express.Router();
 router.post('/login',validate(loginValidator), authController.login);
 router.post('/register', validate(registerValidator), authController.register);
 router.post('/refresh-token', authController.refreshToken);
+const res = await nodeAPI.post('/auth/refresh-token')
 // Protected
 router.post('/logout', protect,authController.logout);
 router.get('/profile',  protect, authController.getProfile)

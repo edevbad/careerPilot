@@ -24,6 +24,7 @@ import Profile from '@/pages/profile/Profile'
 import NotFound from '@/pages/NotFound'
 import Landing from '@/pages/marketing/Landing'
 
+
 export default function AppRouter() {
   return (
     <Routes>
@@ -65,9 +66,8 @@ export default function AppRouter() {
       </Route>
    
 
-// Replace the current root redirect:
-// <Route path="/" element={<Navigate to="/dashboard" replace />} />
-<Route path="/" element={<Landing />} />
+    {/* Public landing page — visible to everyone */}
+    <Route path="/landing" element={<Landing />} />
     </Routes>
   )
 }
