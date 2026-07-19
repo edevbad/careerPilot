@@ -1,79 +1,622 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Anti-Gravity Sidebar — Cosmic Dark Mode, Glassmorphism, Zero-G Effects
+   With collapsible icon-only mode
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+:root {
+  --ag-space-bg: #0B0F19;
+  --ag-cyan: #00f0ff;
+  --ag-cyan-muted: rgba(0, 240, 255, 0.12);
+  --ag-purple: #a855f7;
+  --ag-purple-muted: rgba(168, 85, 247, 0.12);
+  --ag-starlight: #e2e8f0;
+  --ag-starlight-muted: rgba(226, 232, 240, 0.5);
+
+  --ag-glass-bg: rgba(14, 18, 32, 0.55);
+  --ag-glass-border: rgba(255, 255, 255, 0.06);
+  --ag-glass-blur: 24px;
+
+  --ag-sidebar-width: 260px;
+  --ag-sidebar-collapsed-width: 78px;
+  --ag-sidebar-margin: 16px;
+  --ag-sidebar-radius: 20px;
+
+  --ag-transition-lift: 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ag-transition-glow: 0.4s ease;
+  --ag-transition-collapse: 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ─── Sidebar Shell (Floating Card) ──────────────────────────────────────── */
 .sidebar {
   position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: var(--sidebar-width);
-  background: rgba(22, 25, 37, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid var(--color-border);
+  top: var(--ag-sidebar-margin);
+  left: var(--ag-sidebar-margin);
+  bottom: var(--ag-sidebar-margin);
+  width: var(--ag-sidebar-width);
+  z-index: 100;
+
+  /* Glassmorphism */
+  background: var(--ag-glass-bg);
+  backdrop-filter: blur(var(--ag-glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--ag-glass-blur)) saturate(160%);
+
+  /* Rounded floating card */
+  border-radius: var(--ag-sidebar-radius);
+  border: 1px solid var(--ag-glass-border);
+
+  /* Depth shadow + subtle outer glow */
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 60px rgba(0, 240, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  overflow: hidden;
+
+  /* Smooth width transition for collapse */
+  transition: width var(--ag-transition-collapse);
+
+  /* Subtle entrance animation */
+  animation: sidebarFloat 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.logo {
-  height: var(--navbar-height);
+/* Collapsed state — icon-only width */
+.sidebar.collapsed {
+  width: var(--ag-sidebar-collapsed-width);
+}
+
+@keyframes sidebarFloat {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* ─── Animated Star Field ────────────────────────────────────────────────── */
+.starField {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: var(--ag-sidebar-radius);
+}
+
+.star {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  background: var(--ag-starlight);
+  border-radius: 50%;
+  animation: starTwinkle var(--duration) ease-in-out var(--delay) infinite;
+  opacity: 0;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50%      { opacity: 0.7; transform: scale(1); }
+}
+
+/* ─── Glow Orbs (Ambient light) ──────────────────────────────────────────── */
+.glowOrb1, .glowOrb2 {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(50px);
+}
+
+.glowOrb1 {
+  width: 140px;
+  height: 140px;
+  top: -30px;
+  right: -40px;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.12), transparent 70%);
+  animation: orbDrift1 8s ease-in-out infinite;
+}
+
+.glowOrb2 {
+  width: 120px;
+  height: 120px;
+  bottom: 40px;
+  left: -30px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.1), transparent 70%);
+  animation: orbDrift2 10s ease-in-out infinite;
+}
+
+@keyframes orbDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(10px, 15px) scale(1.1); }
+}
+
+@keyframes orbDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-8px, -12px) scale(1.15); }
+}
+
+/* ─── Logo Area ──────────────────────────────────────────────────────────── */
+.logoArea {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  gap: 12px;
+  padding: 24px 20px 20px;
+  transition: padding var(--ag-transition-collapse), justify-content var(--ag-transition-collapse);
 }
 
-.logoIcon {
-  font-size: 1.5rem;
-  margin-right: 0.75rem;
+.collapsed .logoArea {
+  padding: 24px 0 20px;
+  justify-content: center;
+}
+
+.logoMark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logoSvg {
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.3));
+  animation: logoSpin 20s linear infinite;
+}
+
+@keyframes logoSpin {
+  0%   { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.3)); }
+  50%  { filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.4)); }
+  100% { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.3)); }
 }
 
 .logoText {
-  font-size: 1.25rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--color-primary-light), var(--color-secondary));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  max-width: 160px;
+  transition:
+    opacity 0.2s ease,
+    max-width var(--ag-transition-collapse);
+}
+
+.collapsed .logoText {
+  opacity: 0;
+  max-width: 0;
+}
+
+.logoPrimary {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, var(--ag-cyan), var(--ag-purple));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  line-height: 1.2;
 }
 
+.logoSub {
+  font-size: 0.68rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ag-starlight-muted);
+  line-height: 1.2;
+}
+
+/* ─── Separator ──────────────────────────────────────────────────────────── */
+.separator {
+  position: relative;
+  z-index: 1;
+  height: 1px;
+  margin: 0 20px 8px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 240, 255, 0.15) 20%,
+    rgba(168, 85, 247, 0.2) 50%,
+    rgba(0, 240, 255, 0.15) 80%,
+    transparent
+  );
+  transition: margin var(--ag-transition-collapse);
+}
+
+.collapsed .separator {
+  margin: 0 12px 8px;
+}
+
+/* ─── Navigation ─────────────────────────────────────────────────────────── */
 .nav {
-  padding: 1.5rem 1rem;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 4px;
+  padding: 8px 12px;
+  transition: padding var(--ag-transition-collapse);
+}
+
+.collapsed .nav {
+  padding: 8px 8px;
 }
 
 .navItem {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
+  gap: 14px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  color: var(--ag-starlight-muted);
   font-weight: 500;
-  transition: all var(--transition-fast);
-}
-
-.navItem:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text);
+  font-size: 0.92rem;
   text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+
+  /* Zero-G float transitions */
+  transition:
+    transform var(--ag-transition-lift),
+    color 0.3s ease,
+    box-shadow var(--ag-transition-glow),
+    padding var(--ag-transition-collapse),
+    justify-content var(--ag-transition-collapse);
 }
 
-.navItem.active {
-  background: linear-gradient(90deg, rgba(139, 92, 246, 0.15), transparent);
-  color: var(--color-primary-light);
-  border-left: 3px solid var(--color-primary);
+.collapsed .navItem {
+  padding: 11px 0;
+  justify-content: center;
 }
 
-.icon {
-  margin-right: 1rem;
-  font-size: 1.2rem;
-  opacity: 0.8;
+/* Hidden glow backdrop behind each nav item */
+.navGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at 30% 50%,
+    rgba(0, 240, 255, 0.06),
+    transparent 70%
+  );
+  transition: opacity 0.4s ease;
+  pointer-events: none;
 }
 
-.navItem.active .icon {
+/* Active indicator pill (right edge) */
+.navIndicator {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 3px;
+  height: 0;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--ag-cyan), var(--ag-purple));
+  transform: translateY(-50%);
+  transition: height 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.navLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  max-width: 160px;
+  transition:
+    opacity 0.2s ease,
+    max-width var(--ag-transition-collapse);
+}
+
+.collapsed .navLabel {
+  opacity: 0;
+  max-width: 0;
+}
+
+/* ─── Hover: Zero-G Lift ─────────────────────────────────────────────────── */
+.navItem:hover {
+  transform: translateY(-3px);
+  color: var(--ag-starlight);
+  text-decoration: none;
+  box-shadow:
+    0 6px 20px rgba(0, 240, 255, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.navItem:hover .navGlow {
   opacity: 1;
 }
 
-.label {
-  font-size: 0.95rem;
+.navItem:hover .navIcon {
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.4));
+  transform: translateY(-1px);
+}
+
+.navItem:hover .navIndicator {
+  height: 16px;
+}
+
+/* ─── Active State ───────────────────────────────────────────────────────── */
+.navItem.active {
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 240, 255, 0.08),
+    rgba(168, 85, 247, 0.06)
+  );
+  box-shadow:
+    0 0 20px rgba(0, 240, 255, 0.06),
+    inset 0 0 20px rgba(0, 240, 255, 0.02);
+}
+
+.navItem.active .navGlow {
+  opacity: 1;
+  background: radial-gradient(
+    ellipse at 20% 50%,
+    rgba(0, 240, 255, 0.1),
+    transparent 70%
+  );
+}
+
+.navItem.active .navIndicator {
+  height: 24px;
+}
+
+.navItem.active .navIcon {
+  color: var(--ag-cyan);
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.6));
+}
+
+/* ─── Spacer ─────────────────────────────────────────────────────────────── */
+.spacer {
+  flex: 1;
+}
+
+/* ─── Profile Card ───────────────────────────────────────────────────────── */
+.profileCard {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px;
+  margin: 8px 12px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    padding var(--ag-transition-collapse),
+    margin var(--ag-transition-collapse),
+    justify-content var(--ag-transition-collapse);
+}
+
+.collapsed .profileCard {
+  padding: 12px 0;
+  margin: 8px 8px 12px;
+  justify-content: center;
+  gap: 0;
+}
+
+.profileCard:hover {
+  border-color: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.04);
+}
+
+/* Soft glow behind the profile card */
+.profileGlow {
+  position: absolute;
+  top: 50%;
+  left: 20%;
+  width: 80px;
+  height: 80px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+/* Animated gradient ring around avatar */
+.avatarRing {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--ag-cyan), var(--ag-purple), var(--ag-cyan));
+  background-size: 200% 200%;
+  animation: ringShift 4s ease infinite;
+  flex-shrink: 0;
+  transition: width var(--ag-transition-collapse), height var(--ag-transition-collapse);
+}
+
+.collapsed .avatarRing {
+  width: 34px;
+  height: 34px;
+}
+
+@keyframes ringShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--ag-space-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ag-cyan);
+  letter-spacing: 0.02em;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  opacity: 1;
+  max-width: 140px;
+  transition:
+    opacity 0.2s ease,
+    max-width var(--ag-transition-collapse);
+}
+
+.collapsed .profileInfo {
+  opacity: 0;
+  max-width: 0;
+}
+
+.profileName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ag-starlight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profileRole {
+  font-size: 0.7rem;
+  color: var(--ag-starlight-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Settings button */
+.profileSettingsBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--ag-starlight-muted);
+  transition:
+    color 0.3s ease,
+    background 0.3s ease,
+    transform 0.3s ease,
+    opacity 0.2s ease,
+    max-width var(--ag-transition-collapse);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.collapsed .profileSettingsBtn {
+  opacity: 0;
+  max-width: 0;
+  width: 0;
+}
+
+.profileSettingsBtn:hover {
+  color: var(--ag-cyan);
+  background: rgba(0, 240, 255, 0.06);
+  transform: rotate(45deg);
+}
+
+/* ─── Collapse Toggle Button ─────────────────────────────────────────────── */
+.collapseBtn {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--ag-starlight-muted);
+  cursor: pointer;
+  transition: color 0.3s ease, background 0.3s ease;
+  flex-shrink: 0;
+}
+
+.collapseBtn:hover {
+  color: var(--ag-cyan);
+  background: rgba(0, 240, 255, 0.04);
+}
+
+.collapseBtnIcon {
+  transition: transform var(--ag-transition-collapse);
+}
+
+/* Rotate chevron when collapsed */
+.collapsed .collapseBtnIcon {
+  transform: rotate(180deg);
+}
+
+/* ─── Collapsed: Tooltip on hover via ::after ────────────────────────────── */
+.collapsed .navItem {
+  position: relative;
+}
+
+.collapsed .navItem:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(14, 18, 32, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  color: var(--ag-starlight);
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 240, 255, 0.06);
+  animation: tooltipFade 0.2s ease both;
+}
+
+@keyframes tooltipFade {
+  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-120%);
+    transition:
+      transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      width var(--ag-transition-collapse);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
 }

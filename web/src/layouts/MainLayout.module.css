@@ -6,10 +6,13 @@
 
 .content {
   flex: 1;
-  margin-left: var(--sidebar-width);
+  /* --sidebar-width is dynamically set by Sidebar.jsx on <html> */
+  margin-left: calc(var(--sidebar-width) + 32px);
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Smooth slide when sidebar collapses/expands */
+  transition: margin-left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .main {
