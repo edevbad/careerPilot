@@ -204,7 +204,7 @@ dailyTaskSchema.methods.skip = function (reason = null) {
 };
 
 // ── Pre-validate: set xpReward from type if not provided ──────
-dailyTaskSchema.pre("validate", function (next) {
+dailyTaskSchema.pre("validate", function () {
   if (!this.xpReward && this.taskType) {
     this.xpReward = XP_REWARDS[this.taskType] ?? 10;
   }
@@ -214,7 +214,6 @@ dailyTaskSchema.pre("validate", function (next) {
     exp.setHours(23, 59, 59, 999);
     this.expiresAt = exp;
   }
-  next();
 });
 
 module.exports = mongoose.model("DailyTask", dailyTaskSchema);

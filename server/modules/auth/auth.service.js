@@ -50,7 +50,7 @@ exports.refreshToken = async (refreshToken) => {
         throw new AppError(400, 'Refresh token is required');
     }
 
-    const { id } = verifyRefreshToken(refreshToken);
+    const { id } = verifyRefreshToken(refreshToken);    
     const user = await User.findOne({ _id: id }).select('+refreshToken');
     if (!user || !user.refreshToken) {
         throw new AppError(401, 'Session not found please login again');

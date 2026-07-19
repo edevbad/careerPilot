@@ -1,9 +1,9 @@
 const DailyTask = require("../../models/dailytask.model");
-const Progress  = require("../../models/progress.model");
-const User      = require("../../models/user.model");
+const Progress = require("../../models/progress.model");
+const User = require("../../models/user.model");
 const AppError = require("../../utils/appError");
 const { getGeminiModel } = require("../../config/gemini");
-const { default: mongoose } = require("mongoose");
+const mongoose = require("mongoose");
 
 
 
@@ -122,7 +122,7 @@ async function generateTasksWithAI({
 }) {
   const taskCount =
     dailyStudyHours <= 1 ? 3 :
-    dailyStudyHours <= 2 ? 5 : 7;
+      dailyStudyHours <= 2 ? 5 : 7;
 
   const prompt = `
 You are an expert career learning coach.
@@ -137,11 +137,10 @@ Student Profile:
 - Skill Level: ${skillLevel}
 - Daily Study Hours: ${dailyStudyHours}
 
-${
-  skipPatterns.length
-    ? `Avoid generating many tasks similar to these skipped categories: ${skipPatterns.join(", ")}`
-    : ""
-}
+${skipPatterns.length
+      ? `Avoid generating many tasks similar to these skipped categories: ${skipPatterns.join(", ")}`
+      : ""
+    }
 
 Task Types:
 - reading
@@ -195,12 +194,16 @@ async function generateTodaysTasks(userId, roadmap) {
   if (existing > 0) return null; // Already generated
 
   const user = await User.findById(userId).select("currentSkillLevel dailyStudyHours");
-  const activePhase = roadmap.phases.find(p => p.phaseNumber === roadmap.activePhaseNumber);
-  if (!activePhase) throw new Error("No active phase found on roadmap");
+  const activePhase =
+    roadmap.phases.find(p => p.phaseNumber === roadmap.activePhaseNumber) ??
+    roadmap.phases.find(p => p.status === "active") ??
+    roadmap.phases[0];
+
+  if (!activePhase) throw new AppError(400, "No active phase found on roadmap");
 
   // Find task types the user frequently skips (skip count >= 3)
   const skipAgg = await DailyTask.aggregate([
-    { $match: { userId: mongoose.Types.ObjectId(userId), status: "skipped" } },
+    { $match: { userId: new mongoose.Types.ObjectId(userId), status: "skipped" } },
     { $group: { _id: "$taskType", count: { $sum: "$skipCount" } } },
     { $match: { count: { $gte: 3 } } },
   ]);
@@ -248,11 +251,11 @@ async function getTodaysTasks(userId, roadmapId = null) {
   const tasks = await DailyTask.find(query).sort({ taskType: 1 });
 
   // Day summary
-  const total     = tasks.length;
+  const total = tasks.length;
   const completed = tasks.filter(t => t.status === "completed").length;
-  const skipped   = tasks.filter(t => t.status === "skipped").length;
-  const pending   = tasks.filter(t => t.status === "pending").length;
-  const xpEarned  = tasks.filter(t => t.status === "completed").reduce((s, t) => s + t.xpReward, 0);
+  const skipped = tasks.filter(t => t.status === "skipped").length;
+  const pending = tasks.filter(t => t.status === "pending").length;
+  const xpEarned = tasks.filter(t => t.status === "completed").reduce((s, t) => s + t.xpReward, 0);
 
   return {
     tasks,
