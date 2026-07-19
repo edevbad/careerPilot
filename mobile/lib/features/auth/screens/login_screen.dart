@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           shaderCallback: (b) => AppColors.primaryGradient.createShader(b),
                           child: Text('CareerPilot',
                               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Colors.white, fontWeight: FontWeight.w800)),
+                                  color: const Color.fromARGB(255, 224, 178, 178), fontWeight: FontWeight.w800)),
                         ),
                       ],
                     ),
