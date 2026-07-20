@@ -1,8 +1,47 @@
 const { body, param } = require('express-validator')
 
 const VALID_CAREERS = [
-  'Frontend Developer', 'Backend Developer', 'Full Stack Developer',
-  'Data Scientist', 'DevOps Engineer', 'UI/UX Designer', 'Mobile Developer',
+  // Web Development
+  'Frontend Developer',
+  'Backend Developer',
+  'Full Stack Developer',
+
+  // Mobile
+  'Mobile Developer',
+  'iOS Developer',
+  'Android Developer',
+  'Flutter Developer',
+  'React Native Developer',
+
+  // Data & AI
+  'Data Scientist',
+  'Data Analyst',
+  'Machine Learning Engineer',
+  'AI Engineer',
+  'Data Engineer',
+
+  // Cloud & Infrastructure
+  'DevOps Engineer',
+  'Cloud Engineer',
+  'Site Reliability Engineer',
+  'Cybersecurity Engineer',
+
+  // Design
+  'UI/UX Designer',
+  'Product Designer',
+  'Graphic Designer',
+
+  // Other Engineering
+  'Software Engineer',
+  'Blockchain Developer',
+  'Game Developer',
+  'Embedded Systems Engineer',
+  'QA Engineer',
+
+  // Product & Management
+  'Product Manager',
+  'Technical Project Manager',
+  'Scrum Master',
 ]
 const VALID_SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced']
 const VALID_DURATIONS    = ['1 month', '3 months', '6 months', '1 year']
