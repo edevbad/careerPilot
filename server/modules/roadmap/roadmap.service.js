@@ -284,7 +284,7 @@ const deleteRoadmap = async (userId, roadmapId) => {
 
   // Cancel any pending daily tasks for this roadmap
   // (don't delete — they are part of the user's history)
-  const DailyTask = require('../../models/DailyTask')
+  const DailyTask = require('../../models/dailytask.model')
   await DailyTask.updateMany(
     { userId, roadmapId, status: 'pending' },
     { status: 'skipped', skipReason: 'other' }
