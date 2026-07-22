@@ -113,6 +113,17 @@ const phaseSchema = new mongoose.Schema(
       max: 100,
       default: 0,
     },
+    resources: {
+      type: [{
+        title: { type: String, required: true, trim: true },
+        url: { type: String, required: true, trim: true },
+        type: { type: String, enum: ['video', 'article', 'course', 'documentation'], required: true },
+        platform: { type: String, trim: true, default: '' },
+        isBookmarked: { type: Boolean, default: false },
+        isCompleted: { type: Boolean, default: false },
+      }],
+      default: [],
+    },
   },
   {
     _id: true,

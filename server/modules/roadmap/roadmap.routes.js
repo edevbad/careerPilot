@@ -1,7 +1,7 @@
 const express = require('express')
-const router  = express.Router()
+const router = express.Router()
 const { protect } = require('../../middlewares/auth.middleware')
-const validate    = require('../../middlewares/validate.middleware')
+const validate = require('../../middlewares/validate.middleware')
 const {
   mongoIdValidator,
   generateRoadmapValidator,
@@ -19,6 +19,8 @@ const {
   deleteRoadmap,
   updateSkillProgress,
   updateTaskProgress,
+  toggleResourceBookmark,
+  markResourceComplete
 } = require('./roadmap.controller')
 
 router.use(protect)
@@ -29,7 +31,7 @@ router.post('/generate',
 router.post('/:id/regenerate',
   validate([...mongoIdValidator('id'), ...regenerateRoadmapValidator]), regenerateRoadmap)
 
-router.get('/',    getRoadmaps)
+router.get('/', getRoadmaps)
 
 router.get('/:id',
   validate(mongoIdValidator('id')), getRoadmapById)
@@ -45,5 +47,8 @@ router.patch('/:id/skill-progress',
 
 router.patch('/:id/task-progress',
   validate([...mongoIdValidator('id'), ...updateTaskProgressValidator]), updateTaskProgress)
+
+router.patch('/:id/phase/:num/resources/bookmark', toggleResourceBookmark)
+router.patch('/:id/phase/:num/resources/complete', markResourceComplete)
 
 module.exports = router

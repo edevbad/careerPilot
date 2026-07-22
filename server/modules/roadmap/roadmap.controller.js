@@ -53,6 +53,22 @@ const updateTaskProgress = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, { roadmap }, 'Task progress updated'))
 })
 
+const toggleResourceBookmark = asyncHandler(async (req, res) => {
+  const { phaseNumber, resourceUrl } = req.body
+  const roadmap = await roadmapService.toggleResourceBookmark(
+    req.user._id, req.params.id, phaseNumber, resourceUrl
+  )
+  res.status(200).json(new ApiResponse(200, { roadmap }, 'Resource bookmark toggled'))
+})
+
+const markResourceComplete = asyncHandler(async (req, res) => {
+  const { phaseNumber, resourceUrl } = req.body
+  const roadmap = await roadmapService.markResourceComplete(
+    req.user._id, req.params.id, phaseNumber, resourceUrl
+  )
+  res.status(200).json(new ApiResponse(200, { roadmap }, 'Resource marked as complete'))
+})
+
 module.exports = {
   generateRoadmap,
   regenerateRoadmap,
@@ -62,4 +78,6 @@ module.exports = {
   deleteRoadmap,
   updateSkillProgress,
   updateTaskProgress,
+  toggleResourceBookmark,
+  markResourceComplete,
 }

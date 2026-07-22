@@ -36,7 +36,21 @@ Return a JSON object with this exact structure:
           "title": "Variables & Data Types",
           "description": "1-2 sentence description of what this sub-topic covers and why it is important"
         }
-      ]
+      ],
+        "resources": [
+    {
+      "title": "MDN — JavaScript Guide",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+      "type": "documentation",
+      "platform": "MDN"
+    },
+    {
+      "title": "freeCodeCamp — JavaScript Course",
+      "url": "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures/",
+      "type": "course",
+      "platform": "freeCodeCamp"
+    }
+  ]
     }
   ]
 }
@@ -51,7 +65,11 @@ Rules:
 - Include 4-8 subTopics per phase ordered by recommended learning sequence
 - subTopic descriptions must be 1-2 sentences explaining what is covered and why it matters
 - Do NOT include any skills arrays, task arrays, or completion status fields — those are managed separately
-- summary at the phase level must explain the PURPOSE of the phase, not just list topics`
+- summary at the phase level must explain the PURPOSE of the phase, not just list topics
+- Include 3-5 resources per phase from well-known, real platforms (MDN, freeCodeCamp, official docs, YouTube channels like Traversy Media/Fireship, Coursera, Udemy)
+- Only suggest resources that are highly likely to actually exist — prefer official documentation and well-known free platforms over obscure links
+- resource type must be one of: video, article, course, documentation
+- Do not fabricate URLs — use real, canonical URLs for well-known platforms (e.g. https://developer.mozilla.org, https://react.dev, https://nodejs.org/docs)`
 
 // ─── Regenerate ─────────────────────────────────────────────────────────────
 
@@ -65,8 +83,8 @@ Interests / Focus Areas: ${interests || 'None specified'}
 Start Date: ${startDate || new Date().toISOString().split('T')[0]}
 User Feedback: ${feedback || 'No specific feedback provided'}
 ${completedPhaseNumbers?.length
-  ? `Already Completed Phases: ${completedPhaseNumbers.join(', ')} — do NOT remove or alter these phases. Keep their phaseNumbers identical.`
-  : ''}
+    ? `Already Completed Phases: ${completedPhaseNumbers.join(', ')} — do NOT remove or alter these phases. Keep their phaseNumbers identical.`
+    : ''}
 
 The user has requested changes to their roadmap. Apply their feedback while keeping the overall structure valid.
 
