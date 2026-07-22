@@ -269,7 +269,7 @@ const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
 
 const getRoadmaps = async (userId) =>
   Roadmap.find({ userId, status: { $ne: 'archived' } })
-    .select('targetCareer skillLevel summary status completionPercent activePhaseNumber totalEstimatedWeeks createdAt')
+    .select('targetCareer skillLevel summary status completionPercent activePhaseNumber totalEstimatedWeeks createdAt phases')
     .sort({ createdAt: -1 })
 
 // ────────────────────────────────────────────────────────────────────────────
