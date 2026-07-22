@@ -1,0 +1,293 @@
+{
+  "templates": [
+    {
+      "targetCareer": "Full Stack Web Development",
+      "skillLevel": "Beginner",
+      "duration": "1 month",
+      "interests": ["web development", "javascript"],
+      "summary": "A fast-paced crash course covering just enough HTML, CSS, and JavaScript to build a simple static site.",
+      "phases": [
+        {
+          "phaseNumber": 1,
+          "title": "HTML & CSS Crash Course",
+          "summary": "Learn to structure and style a basic webpage.",
+          "difficulty": "Beginner",
+          "estimatedWeeks": 2,
+          "learningObjectives": [
+            "Write semantic HTML markup",
+            "Style pages using CSS Flexbox and Grid"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "HTML Basics", "description": "Tags, structure, forms." },
+            { "order": 2, "title": "CSS Basics", "description": "Selectors, box model, Flexbox." }
+          ],
+          "resources": [
+            { "title": "MDN HTML Guide", "url": "https://developer.mozilla.org/en-US/docs/Web/HTML", "type": "documentation", "platform": "MDN" }
+          ]
+        },
+        {
+          "phaseNumber": 2,
+          "title": "JavaScript Essentials",
+          "summary": "Add basic interactivity to your pages.",
+          "difficulty": "Beginner",
+          "estimatedWeeks": 2,
+          "learningObjectives": [
+            "Manipulate the DOM with JavaScript",
+            "Handle simple user events"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "JS Syntax & Variables", "description": "Variables, functions, conditionals." },
+            { "order": 2, "title": "DOM Manipulation", "description": "Selecting and updating elements." }
+          ],
+          "resources": [
+            { "title": "JavaScript.info", "url": "https://javascript.info", "type": "documentation", "platform": "JavaScript.info" }
+          ]
+        }
+      ]
+    },
+    {
+      "targetCareer": "Full Stack Web Development",
+      "skillLevel": "Beginner",
+      "duration": "3 months",
+      "interests": ["web development", "javascript", "react"],
+      "summary": "A beginner-friendly path from web fundamentals to building simple React apps.",
+      "phases": [
+        {
+          "phaseNumber": 1,
+          "title": "Web Fundamentals",
+          "summary": "Core HTML, CSS, and JavaScript foundations.",
+          "difficulty": "Beginner",
+          "estimatedWeeks": 4,
+          "learningObjectives": [
+            "Build responsive layouts",
+            "Write clean JavaScript logic"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "HTML5 Semantics", "description": "Accessible, structured markup." },
+            { "order": 2, "title": "CSS Layout", "description": "Flexbox, Grid, responsive design." },
+            { "order": 3, "title": "JavaScript Basics", "description": "Functions, loops, DOM, events." }
+          ],
+          "resources": [
+            { "title": "MDN Web Docs", "url": "https://developer.mozilla.org", "type": "documentation", "platform": "MDN" }
+          ]
+        },
+        {
+          "phaseNumber": 2,
+          "title": "Intro to React",
+          "summary": "Building your first component-based UI.",
+          "difficulty": "Beginner",
+          "estimatedWeeks": 4,
+          "learningObjectives": [
+            "Understand components and props",
+            "Manage local state with hooks"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Components & JSX", "description": "Composition, props." },
+            { "order": 2, "title": "useState & useEffect", "description": "Basic hooks usage." }
+          ],
+          "resources": [
+            { "title": "React Docs", "url": "https://react.dev", "type": "documentation", "platform": "React" }
+          ]
+        },
+        {
+          "phaseNumber": 3,
+          "title": "Basic Backend with Node.js",
+          "summary": "Introduction to server-side JavaScript.",
+          "difficulty": "Beginner",
+          "estimatedWeeks": 4,
+          "learningObjectives": [
+            "Build a simple REST API",
+            "Understand request/response cycles"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Node.js Basics", "description": "Modules, npm, event loop." },
+            { "order": 2, "title": "Express.js", "description": "Routing, middleware, basic CRUD." }
+          ],
+          "resources": [
+            { "title": "Express.js Guide", "url": "https://expressjs.com", "type": "documentation", "platform": "Express" }
+          ]
+        }
+      ]
+    },
+    {
+      "targetCareer": "Full Stack Web Development",
+      "skillLevel": "Intermediate",
+      "duration": "6 months",
+      "interests": ["web development", "react", "node.js", "databases"],
+      "summary": "A comprehensive path covering frontend, backend, databases, and deployment for developers with some prior experience.",
+      "phases": [
+        {
+          "phaseNumber": 1,
+          "title": "Advanced React Patterns",
+          "summary": "Deepen React skills with state management and performance.",
+          "difficulty": "Intermediate",
+          "estimatedWeeks": 5,
+          "learningObjectives": [
+            "Manage complex state across components",
+            "Optimize rendering performance"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Context API & Reducers", "description": "Global state without external libraries." },
+            { "order": 2, "title": "Performance Optimization", "description": "Memoization, lazy loading." }
+          ],
+          "resources": [
+            { "title": "React Docs - Advanced", "url": "https://react.dev/learn", "type": "documentation", "platform": "React" }
+          ]
+        },
+        {
+          "phaseNumber": 2,
+          "title": "Backend APIs with Node & Express",
+          "summary": "Building robust, production-style REST APIs.",
+          "difficulty": "Intermediate",
+          "estimatedWeeks": 5,
+          "learningObjectives": [
+            "Design RESTful API architecture",
+            "Implement authentication and authorization"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "REST API Design", "description": "Resource modeling, status codes." },
+            { "order": 2, "title": "Auth with JWT", "description": "Login, tokens, protected routes." }
+          ],
+          "resources": [
+            { "title": "JWT.io Introduction", "url": "https://jwt.io/introduction", "type": "article", "platform": "JWT.io" }
+          ]
+        },
+        {
+          "phaseNumber": 3,
+          "title": "Databases: SQL & NoSQL",
+          "summary": "Data modeling and persistence layers.",
+          "difficulty": "Intermediate",
+          "estimatedWeeks": 5,
+          "learningObjectives": [
+            "Design normalized relational schemas",
+            "Model documents in MongoDB"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "SQL Fundamentals", "description": "Joins, indexes, transactions." },
+            { "order": 2, "title": "MongoDB & Mongoose", "description": "Schemas, aggregation, relations." }
+          ],
+          "resources": [
+            { "title": "MongoDB University", "url": "https://university.mongodb.com", "type": "course", "platform": "MongoDB" }
+          ]
+        },
+        {
+          "phaseNumber": 4,
+          "title": "Deployment & DevOps Basics",
+          "summary": "Shipping full-stack apps to production.",
+          "difficulty": "Intermediate",
+          "estimatedWeeks": 5,
+          "learningObjectives": [
+            "Deploy apps using CI/CD pipelines",
+            "Configure environment variables and secrets"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Docker Basics", "description": "Containerizing an app." },
+            { "order": 2, "title": "CI/CD with GitHub Actions", "description": "Automated build/deploy pipelines." }
+          ],
+          "resources": [
+            { "title": "Docker Get Started", "url": "https://docs.docker.com/get-started/", "type": "documentation", "platform": "Docker" }
+          ]
+        }
+      ]
+    },
+    {
+      "targetCareer": "Full Stack Web Development",
+      "skillLevel": "Advanced",
+      "duration": "1 year",
+      "interests": ["system design", "microservices", "cloud", "react", "node.js"],
+      "summary": "A deep, career-level path covering architecture, scalability, cloud infrastructure, and advanced full-stack engineering.",
+      "phases": [
+        {
+          "phaseNumber": 1,
+          "title": "Advanced Frontend Architecture",
+          "summary": "Scalable, maintainable frontend systems.",
+          "difficulty": "Advanced",
+          "estimatedWeeks": 10,
+          "learningObjectives": [
+            "Architect large-scale React applications",
+            "Implement micro-frontend patterns"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "State Management at Scale", "description": "Redux Toolkit, Zustand, or Recoil." },
+            { "order": 2, "title": "Micro-Frontends", "description": "Module federation, independent deploys." }
+          ],
+          "resources": [
+            { "title": "Micro Frontends", "url": "https://martinfowler.com/articles/micro-frontends.html", "type": "article", "platform": "Martin Fowler" }
+          ]
+        },
+        {
+          "phaseNumber": 2,
+          "title": "Backend System Design",
+          "summary": "Designing scalable, resilient backend systems.",
+          "difficulty": "Advanced",
+          "estimatedWeeks": 12,
+          "learningObjectives": [
+            "Design microservice architectures",
+            "Apply caching and load balancing strategies"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Microservices Patterns", "description": "Service boundaries, communication." },
+            { "order": 2, "title": "Caching & Queues", "description": "Redis, message brokers." }
+          ],
+          "resources": [
+            { "title": "System Design Primer", "url": "https://github.com/donnemartin/system-design-primer", "type": "documentation", "platform": "GitHub" }
+          ]
+        },
+        {
+          "phaseNumber": 3,
+          "title": "Cloud Infrastructure & Scalability",
+          "summary": "Running full-stack systems in production at scale.",
+          "difficulty": "Advanced",
+          "estimatedWeeks": 12,
+          "learningObjectives": [
+            "Deploy and manage cloud infrastructure",
+            "Implement horizontal scaling and monitoring"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "AWS/GCP Fundamentals", "description": "Compute, storage, networking basics." },
+            { "order": 2, "title": "Kubernetes Basics", "description": "Orchestration, scaling, deployments." }
+          ],
+          "resources": [
+            { "title": "Kubernetes Docs", "url": "https://kubernetes.io/docs/home/", "type": "documentation", "platform": "Kubernetes" }
+          ]
+        },
+        {
+          "phaseNumber": 4,
+          "title": "Security, Testing & Observability",
+          "summary": "Production-grade quality and reliability practices.",
+          "difficulty": "Advanced",
+          "estimatedWeeks": 8,
+          "learningObjectives": [
+            "Implement automated testing pipelines",
+            "Apply security best practices across the stack"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Testing Strategies", "description": "Unit, integration, E2E testing." },
+            { "order": 2, "title": "App Security", "description": "OWASP top 10, secure auth patterns." }
+          ],
+          "resources": [
+            { "title": "OWASP Top 10", "url": "https://owasp.org/www-project-top-ten/", "type": "documentation", "platform": "OWASP" }
+          ]
+        },
+        {
+          "phaseNumber": 5,
+          "title": "Capstone: Production-Grade Application",
+          "summary": "Build and ship a complete full-stack system end-to-end.",
+          "difficulty": "Advanced",
+          "estimatedWeeks": 10,
+          "learningObjectives": [
+            "Integrate all prior phases into one system",
+            "Deploy a fully monitored, scalable application"
+          ],
+          "subTopics": [
+            { "order": 1, "title": "Project Planning", "description": "Architecture, tech stack decisions." },
+            { "order": 2, "title": "Build & Deploy", "description": "End-to-end implementation and launch." }
+          ],
+          "resources": [
+            { "title": "The Twelve-Factor App", "url": "https://12factor.net", "type": "documentation", "platform": "12factor.net" }
+          ]
+        }
+      ]
+    }
+  ]
+}

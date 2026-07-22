@@ -4,6 +4,7 @@ const roadmapService = require('./roadmap.service')
 
 const generateRoadmap = asyncHandler(async (req, res) => {
   const { targetCareer, skillLevel, duration, interests, startDate } = req.body
+  console.log('generateRoadmap', { targetCareer, skillLevel, duration, interests, startDate })
   const roadmap = await roadmapService.generateRoadmap(req.user._id, {
     targetCareer, skillLevel, duration, interests, startDate,
   })

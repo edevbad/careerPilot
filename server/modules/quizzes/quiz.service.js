@@ -1,13 +1,26 @@
-const axios      = require("axios");
+const axios = require("axios");
 const QuizResult = require("../../models/quizresult.model");
-const Roadmap    = require("../../models/roadmap.model");
-const Progress   = require("../../models/progress.model");
+const Roadmap = require("../../models/roadmap.model");
+const Progress = require("../../models/progress.model");
 const AppError = require("../../utils/appError");
 const { getGeminiModel } = require("../../config/gemini");
 
+const crypto = require("crypto");
 
-// Laravel API base — Quiz Questions live there
-const LARAVEL_API = process.env.LARAVEL_API_URL || "http://localhost:8000/api";
+function signAnswer(questionId, correctAnswer) {
+  return crypto
+    .createHmac("sha256", process.env.QUIZ_SIGNING_SECRET)
+    .update(`${questionId}:${correctAnswer.toLowerCase().trim()}`)
+    .digest("hex");
+}
+
+function verifyAnswer(questionId, userAnswer, token) {
+  if (!userAnswer || !token) return false;
+  const expected = signAnswer(questionId, userAnswer);
+  return expected === token;
+}
+
+
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -94,6 +107,21 @@ const callGemini = async (prompt, maxRetries = 2) => {
   }
 };
 
+const QUESTION_TYPE_MAP = {
+  mcq: "mcq",
+  true_false: "true-false",
+  "true-false": "true-false",
+  truefalse: "true-false",
+  code_review: "code-review",
+  "code-review": "code-review",
+  codereview: "code-review",
+};
+
+function normalizeQuestionType(raw) {
+  const key = raw?.toLowerCase().trim().replace(/\s+/g, "_");
+  return QUESTION_TYPE_MAP[key] || QUESTION_TYPE_MAP[raw?.toLowerCase().trim()] || raw;
+}
+
 /**
  * Fetch questions from the Laravel question bank for a skill + phase.
  * Returns an array of question objects with correct_answer EXCLUDED
@@ -160,7 +188,7 @@ Return:
 [
   {
     "questionText":"...",
-    "questionType":"mcq",
+    "questionType":"mcq" | "true-false" | "code-review",
     "options":{
       "A":"...",
       "B":"...",
@@ -188,11 +216,20 @@ For code-review include the code snippet inside questionText.
     throw new AppError(502, "AI returned invalid question format.");
   }
 
-  return questions.slice(0, count).map((q, i) => ({
-    ...q,
-    id: -(i + 1),
-    isAiGenerated: true,
-  }));
+  return questions.slice(0, count).map((q, i) => {
+    const id = -(i + 1);
+    return {
+      ...q,
+      questionType: normalizeQuestionType(q.questionType),
+      id,
+      isAiGenerated: true,
+      id,
+      isAiGenerated: true,
+      _answerToken: signAnswer(id, q.correctAnswer), // sent to client instead of the answer
+      correctAnswer: undefined, // never leaves the server
+      explanation: q.explanation, // fine to keep, or strip too if you want extra safety
+    };
+  });
 }
 
 /**
@@ -386,14 +423,7 @@ async function submitQuiz(userId, roadmapId, phaseNumber, { answers, startedAt }
     const isAI = submitted.questionId < 0;
 
     if (isAI) {
-      // AI questions carry their own correctAnswer in the submission
-      // (the client received them without it, but we stored them in session/cache)
-      // In production: store AI questions in Redis with TTL on quiz start
-      // For now we trust the submitted correctAnswer only for AI questions
-      const isCorrect =
-        submitted.userAnswer !== null &&
-        submitted.userAnswer?.toLowerCase().trim() ===
-          submitted._correctAnswer?.toLowerCase().trim();
+      const isCorrect = verifyAnswer(submitted.questionId, submitted.userAnswer, submitted._answerToken);
 
       if (isCorrect) correctCount++;
       else wrongTopics.add(submitted._topic || phase.title);
@@ -402,10 +432,10 @@ async function submitQuiz(userId, roadmapId, phaseNumber, { answers, startedAt }
         questionId: submitted.questionId,
         questionText: submitted.questionText || "",
         userAnswer: submitted.userAnswer,
-        correctAnswer: submitted._correctAnswer || "N/A",
+        correctAnswer: isCorrect ? submitted.userAnswer : "See explanation",
         isCorrect,
         explanation: submitted._explanation || "",
-        questionType: submitted.questionType || "mcq",
+        questionType: normalizeQuestionType(submitted.questionType) || "mcq",
       });
     } else {
       const q = questionMap[submitted.questionId];
@@ -414,7 +444,7 @@ async function submitQuiz(userId, roadmapId, phaseNumber, { answers, startedAt }
       const isCorrect =
         submitted.userAnswer !== null &&
         submitted.userAnswer?.toLowerCase().trim() ===
-          q.correct_answer?.toLowerCase().trim();
+        q.correct_answer?.toLowerCase().trim();
 
       if (isCorrect) correctCount++;
       else wrongTopics.add(q.question_text?.substring(0, 60) || phase.title);
@@ -431,14 +461,14 @@ async function submitQuiz(userId, roadmapId, phaseNumber, { answers, startedAt }
     }
   }
 
-  const totalQuestions   = gradedAnswers.length;
-  const passingScore     = phase.quizPassingScore || 70;
-  const score            = totalQuestions > 0
+  const totalQuestions = gradedAnswers.length;
+  const passingScore = phase.quizPassingScore || 70;
+  const score = totalQuestions > 0
     ? Math.round((correctCount / totalQuestions) * 100)
     : 0;
-  const passed           = score >= passingScore;
-  const attemptNumber    = (await QuizResult.countAttempts(userId, roadmapId, phaseNumber)) + 1;
-  const completedAt      = new Date();
+  const passed = score >= passingScore;
+  const attemptNumber = (await QuizResult.countAttempts(userId, roadmapId, phaseNumber)) + 1;
+  const completedAt = new Date();
 
   // Generate study suggestions on failure
   let studySuggestions = [];
@@ -512,9 +542,9 @@ async function getPhaseResults(userId, roadmapId, phaseNumber) {
     .sort({ attemptNumber: 1 })
     .select("-answers"); // Exclude per-answer detail from the list view
 
-  const hasPassed  = results.some(r => r.passed);
-  const bestScore  = results.length ? Math.max(...results.map(r => r.score)) : null;
-  const latest     = results.at(-1) || null;
+  const hasPassed = results.some(r => r.passed);
+  const bestScore = results.length ? Math.max(...results.map(r => r.score)) : null;
+  const latest = results.at(-1) || null;
 
   return {
     phaseNumber,
@@ -542,7 +572,7 @@ async function getRetakeStatus(userId, roadmapId, phaseNumber) {
 
   const latest = await QuizResult.getLatestAttempt(userId, roadmapId, phaseNumber);
   const alreadyPassed = await QuizResult.hasPassed(userId, roadmapId, phaseNumber);
-  const attemptCount  = await QuizResult.countAttempts(userId, roadmapId, phaseNumber);
+  const attemptCount = await QuizResult.countAttempts(userId, roadmapId, phaseNumber);
 
   if (alreadyPassed) {
     return {

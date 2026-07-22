@@ -1,6 +1,7 @@
 const AppError = require('../../utils/appError')
 const Roadmap = require('../../models/roadmap.model')
 const Progress = require('../../models/progress.model')
+const { findRoadmapTemplate} = require('./roadmap.templates')
 const {
   SYSTEM_INSTRUCTION,
   buildRoadmapPrompt,
@@ -150,9 +151,23 @@ const buildPreservedPhases = (existingPhases) => {
 // ─── Service Functions ───────────────────────────────────────────────────────
 
 const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, interests, startDate }) => {
-  const prompt = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })
-  const aiData = await callGemini(prompt)
-  validateAIRoadmap(aiData)
+  // Try a static template first — only skip Gemini if it fully satisfies validation
+  let aiData = findRoadmapTemplate(targetCareer, skillLevel, duration)
+
+  if (aiData) {
+    try {
+      validateAIRoadmap(aiData)
+    } catch (err) {
+      console.warn(`Template for "${targetCareer}"/${skillLevel} failed validation, falling back to Gemini:`, err.message)
+      aiData = null
+    }
+  }
+
+  if (!aiData) {
+    const prompt = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })
+    aiData = await callGemini(prompt)
+    validateAIRoadmap(aiData)
+  }
 
   const phases = mapPhases(aiData.phases)
   // Phase 1 is always unlocked immediately — the pre-save hook also does this
