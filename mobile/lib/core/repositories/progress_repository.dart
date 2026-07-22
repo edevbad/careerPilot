@@ -13,7 +13,13 @@ class ProgressRepository {
         response.data['data']['summary'] as Map<String, dynamic>? ?? {},
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load progress summary';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -24,7 +30,13 @@ class ProgressRepository {
     try {
       await _dio.post('/progress/sync/$roadmapId');
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Progress sync failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);

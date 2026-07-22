@@ -50,7 +50,13 @@ class AuthRepository {
       await AuthStorage.saveUserJson(authResponse.user.toJsonString());
       return authResponse;
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Registration failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -72,8 +78,14 @@ class AuthRepository {
       await AuthStorage.saveUserJson(authResponse.user.toJsonString());
       return authResponse;
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Session refresh failed';
-      throw ApiException(e.response?.statusCode ?? 401, msg);
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
+      throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
     }
@@ -97,7 +109,13 @@ class AuthRepository {
       await AuthStorage.saveUserJson(user.toJsonString());
       return user;
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to fetch profile';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -116,7 +134,13 @@ class AuthRepository {
       await AuthStorage.saveUserJson(user.toJsonString());
       return user;
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to update profile';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);

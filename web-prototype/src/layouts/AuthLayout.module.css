@@ -1,0 +1,127 @@
+.wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Brand Panel ──────────────────────────── */
+.brandPanel {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: linear-gradient(145deg, #0f111a 0%, #1a1135 60%, #0f111a 100%);
+  overflow: hidden;
+}
+
+.panelGlow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(139, 92, 246, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 70%, rgba(236, 72, 153, 0.12) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.brandContent {
+  position: relative;
+  max-width: 420px;
+  z-index: 1;
+}
+
+.logoWrap {
+  width: 72px; height: 72px;
+  border-radius: var(--radius-xl);
+  background: var(--gradient-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  box-shadow: var(--shadow-glow);
+  margin-bottom: 1.5rem;
+}
+
+.logoEmoji { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+
+.brandName {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal);
+}
+
+.feature:hover {
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.featureIcon {
+  font-size: 1.3rem;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.featureTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.125rem;
+}
+
+.featureDesc {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Form Panel ───────────────────────────── */
+.formPanel {
+  width: 480px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(22, 25, 37, 0.98);
+  border-left: 1px solid var(--color-border);
+}
+
+.formContainer {
+  width: 100%;
+  max-width: 380px;
+}
+
+@media (max-width: 768px) {
+  .wrapper { flex-direction: column; }
+  .brandPanel { display: none; }
+  .formPanel { width: 100%; border-left: none; }
+}

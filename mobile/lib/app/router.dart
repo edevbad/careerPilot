@@ -83,6 +83,13 @@ final GoRouter router = GoRouter(
               path: '/tasks',
               builder: (context, state) => const TasksScreen(),
             ),
+            GoRoute(
+              path: '/roadmaps/:roadmapId/tasks/:phaseNumber',
+              builder: (context, state) {
+                final roadmapId = state.pathParameters['roadmapId'];
+                return TasksScreen(initialRoadmapId: roadmapId);
+              },
+            ),
           ],
         ),
 
@@ -121,8 +128,9 @@ final GoRouter router = GoRouter(
                   path: ':roadmapId/:phaseNumber',
                   builder: (context, state) => ActiveQuizScreen(
                     roadmapId: state.pathParameters['roadmapId']!,
-                    phaseNumber:
-                        int.tryParse(state.pathParameters['phaseNumber'] ?? '1') ?? 1,
+                    phaseNumber: int.tryParse(
+                            state.pathParameters['phaseNumber'] ?? '1') ??
+                        1,
                   ),
                 ),
               ],
@@ -141,19 +149,5 @@ final GoRouter router = GoRouter(
         ),
       ],
     ),
-
-    // // ── Resources (accessible from anywhere) ────────
-    // GoRoute(
-    //   path: '/resources',
-    //   builder: (context, state) => const ResourceBrowseScreen(),
-    //   routes: [
-    //     GoRoute(
-    //       path: ':id',
-    //       builder: (context, state) => ResourceDetailScreen(
-    //         resourceId: state.pathParameters['id']!,
-    //       ),
-    //     ),
-    //   ],
-    // ),
   ],
 );

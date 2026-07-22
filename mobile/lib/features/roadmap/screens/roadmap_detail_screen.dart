@@ -19,7 +19,6 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
   bool _isLoading = true;
   String? _error;
   Set<int> expandedPhases = {};
-  Map<String, bool> skillStates = {};
 
   @override
   void initState() {
@@ -38,17 +37,7 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
         setState(() {
           _roadmap = rm;
           _isLoading = false;
-          
-          // Expand active phase by default
           expandedPhases = {rm.activePhaseNumber};
-          
-          // Init skill states
-          skillStates.clear();
-          for (final phase in rm.phases) {
-            for (final skill in phase.skills) {
-              skillStates[skill.name] = skill.completed;
-            }
-          }
         });
       }
     } catch (e) {
@@ -61,37 +50,92 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
     }
   }
 
-  Future<void> _toggleSkill(int phaseIndex, int skillIndex, String skillName, bool currentVal) async {
-    final nextVal = !currentVal;
-    
-    // Optimistic UI update
+  Future<void> _toggleResourceBookmark(
+      int phaseNumber, String resourceUrl, bool nextVal) async {
+    final prevRoadmap = _roadmap;
+    if (prevRoadmap == null) return;
+
     setState(() {
-      skillStates[skillName] = nextVal;
+      _roadmap = _updateResourceLocally(
+        prevRoadmap,
+        phaseNumber,
+        resourceUrl,
+        isBookmarked: nextVal,
+      );
     });
 
     try {
-      final updated = await _roadmapRepository.updateSkillProgress(
+      final updated = await _roadmapRepository.toggleResourceBookmark(
         widget.roadmapId,
-        phaseIndex: phaseIndex,
-        skillIndex: skillIndex,
-        completed: nextVal,
+        phaseNumber: phaseNumber,
+        resourceUrl: resourceUrl,
       );
       if (mounted) {
-        setState(() {
-          _roadmap = updated;
-        });
+        setState(() => _roadmap = updated);
       }
     } catch (e) {
-      // Revert optimistic UI update on error
-      setState(() {
-        skillStates[skillName] = currentVal;
-      });
       if (mounted) {
+        setState(() => _roadmap = prevRoadmap);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update progress: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('Failed to update bookmark: $e'),
+              backgroundColor: AppColors.error),
         );
       }
     }
+  }
+
+  Future<void> _toggleResourceComplete(
+      int phaseNumber, String resourceUrl, bool nextVal) async {
+    final prevRoadmap = _roadmap;
+    if (prevRoadmap == null) return;
+
+    setState(() {
+      _roadmap = _updateResourceLocally(
+        prevRoadmap,
+        phaseNumber,
+        resourceUrl,
+        isCompleted: nextVal,
+      );
+    });
+
+    try {
+      final updated = await _roadmapRepository.markResourceComplete(
+        widget.roadmapId,
+        phaseNumber: phaseNumber,
+        resourceUrl: resourceUrl,
+      );
+      if (mounted) {
+        setState(() => _roadmap = updated);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _roadmap = prevRoadmap);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to update resource: $e'),
+              backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  RoadmapModel _updateResourceLocally(
+    RoadmapModel roadmap,
+    int phaseNumber,
+    String resourceUrl, {
+    bool? isBookmarked,
+    bool? isCompleted,
+  }) {
+    final newPhases = roadmap.phases.map((p) {
+      if (p.number != phaseNumber) return p;
+      final newResources = p.resources.map((r) {
+        if (r.url != resourceUrl) return r;
+        return r.copyWith(isBookmarked: isBookmarked, isCompleted: isCompleted);
+      }).toList();
+      return p.copyWith(resources: newResources);
+    }).toList();
+    return roadmap.copyWith(phases: newPhases);
   }
 
   Future<void> _handleMenuAction(String action) async {
@@ -101,14 +145,20 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
         useRootNavigator: true,
         builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.surface,
-          title: const Text('Delete Roadmap?', style: TextStyle(color: AppColors.textPrimary)),
-          content: const Text('Are you sure you want to delete this roadmap? This action cannot be undone.', style: TextStyle(color: AppColors.textSecondary)),
+          title: const Text('Delete Roadmap?',
+              style: TextStyle(color: AppColors.textPrimary)),
+          content: const Text(
+              'Are you sure you want to delete this roadmap? This action cannot be undone.',
+              style: TextStyle(color: AppColors.textSecondary)),
           actions: [
-            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-              child: const Text('Delete', style: TextStyle(color: Colors.white)),
+              child:
+                  const Text('Delete', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -117,12 +167,14 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
         try {
           await _roadmapRepository.deleteRoadmap(widget.roadmapId);
           if (mounted) {
-            context.pop(true); // Return true to indicate deletion
+            context.pop(true);
           }
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.error),
+              SnackBar(
+                  content: Text('Delete failed: $e'),
+                  backgroundColor: AppColors.error),
             );
           }
         }
@@ -134,7 +186,8 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
         useRootNavigator: true,
         builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.surface,
-          title: const Text('Regenerate Roadmap', style: TextStyle(color: AppColors.textPrimary)),
+          title: const Text('Regenerate Roadmap',
+              style: TextStyle(color: AppColors.textPrimary)),
           content: TextField(
             controller: feedbackCtrl,
             decoration: const InputDecoration(
@@ -142,11 +195,15 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Regenerate', style: TextStyle(color: Colors.white)),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Regenerate',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -156,7 +213,9 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
         try {
           final updated = await _roadmapRepository.regenerateRoadmap(
             widget.roadmapId,
-            feedback: feedbackCtrl.text.trim().isNotEmpty ? feedbackCtrl.text.trim() : null,
+            feedback: feedbackCtrl.text.trim().isNotEmpty
+                ? feedbackCtrl.text.trim()
+                : null,
           );
           if (mounted) {
             setState(() {
@@ -164,14 +223,18 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
               _isLoading = false;
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Roadmap regenerated successfully!'), backgroundColor: AppColors.success),
+              const SnackBar(
+                  content: Text('Roadmap regenerated successfully!'),
+                  backgroundColor: AppColors.success),
             );
           }
         } catch (e) {
           if (mounted) {
             setState(() => _isLoading = false);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Regeneration failed: $e'), backgroundColor: AppColors.error),
+              SnackBar(
+                  content: Text('Regeneration failed: $e'),
+                  backgroundColor: AppColors.error),
             );
           }
         }
@@ -184,7 +247,8 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        body:
+            Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
@@ -195,7 +259,8 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(_error ?? 'Roadmap not found', style: Theme.of(context).textTheme.bodyMedium),
+              Text(_error ?? 'Roadmap not found',
+                  style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: _loadRoadmap,
@@ -215,7 +280,6 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // ── Header ──────────────────────────────
           SliverAppBar(
             expandedHeight: 190,
             floating: false,
@@ -224,22 +288,31 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
             leading: IconButton(
               onPressed: () => context.pop(),
               icon: Container(
-                width: 34, height: 34,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.textPrimary),
+                child: const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 16, color: AppColors.textPrimary),
               ),
             ),
             actions: [
               PopupMenuButton<String>(
                 color: AppColors.surfaceVariant,
-                icon: const Icon(Icons.more_vert_rounded, color: AppColors.textPrimary),
+                icon: const Icon(Icons.more_vert_rounded,
+                    color: AppColors.textPrimary),
                 onSelected: _handleMenuAction,
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'regenerate', child: Text('Regenerate', style: TextStyle(color: AppColors.textPrimary))),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                  const PopupMenuItem(
+                      value: 'regenerate',
+                      child: Text('Regenerate',
+                          style: TextStyle(color: AppColors.textPrimary))),
+                  const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete',
+                          style: TextStyle(color: AppColors.error))),
                 ],
               ),
             ],
@@ -249,7 +322,8 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF0D1425), Color(0xFF080C18)],
-                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
                 child: Column(
@@ -261,18 +335,22 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
                         child: Text(roadmap.targetCareer,
                             style: Theme.of(context).textTheme.headlineMedium),
                       ),
-                      // Big circular progress
                       SizedBox(
-                        width: 64, height: 64,
+                        width: 64,
+                        height: 64,
                         child: Stack(alignment: Alignment.center, children: [
                           CircularProgressIndicator(
                             value: completion,
                             backgroundColor: AppColors.surfaceVariant,
-                            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                            valueColor:
+                                const AlwaysStoppedAnimation(AppColors.primary),
                             strokeWidth: 5,
                           ),
                           Text('${(completion * 100).toInt()}%',
-                              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+                              style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13)),
                         ]),
                       ),
                     ]),
@@ -280,7 +358,8 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
                     Row(children: [
                       _StatusBadge(roadmap.status),
                       const SizedBox(width: 8),
-                      Text('${phases.length} phases · Started ${roadmap.startDate ?? ""}',
+                      Text(
+                          '${phases.length} phases · Started ${roadmap.startDate ?? ""}',
                           style: Theme.of(context).textTheme.bodySmall),
                     ]),
                   ],
@@ -288,8 +367,6 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
               ),
             ),
           ),
-
-          // ── Phase List ───────────────────────────
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverList(
@@ -304,7 +381,6 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
                       phaseIndex: i,
                       phase: phase,
                       isExpanded: expandedPhases.contains(phase.number),
-                      skillStates: skillStates,
                       onToggle: () => setState(() {
                         final n = phase.number;
                         if (expandedPhases.contains(n)) {
@@ -313,8 +389,10 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
                           expandedPhases.add(n);
                         }
                       }),
-                      onSkillToggle: (skillIndex, name, currentVal) =>
-                          _toggleSkill(i, skillIndex, name, currentVal),
+                      onResourceBookmarkToggle: (url, nextVal) =>
+                          _toggleResourceBookmark(phase.number, url, nextVal),
+                      onResourceCompleteToggle: (url, nextVal) =>
+                          _toggleResourceComplete(phase.number, url, nextVal),
                     ),
                   );
                 },
@@ -328,24 +406,113 @@ class _RoadmapDetailScreenState extends State<RoadmapDetailScreen> {
   }
 }
 
-// ── Phase Card ────────────────────────────────────────
+class _ResourceTile extends StatelessWidget {
+  final ResourceModel resource;
+  final VoidCallback onBookmarkToggle;
+  final VoidCallback onCompleteToggle;
+
+  const _ResourceTile({
+    required this.resource,
+    required this.onBookmarkToggle,
+    required this.onCompleteToggle,
+  });
+
+  IconData get _typeIcon {
+    switch (resource.type) {
+      case 'video':
+        return Icons.play_circle_outline_rounded;
+      case 'course':
+        return Icons.school_outlined;
+      case 'documentation':
+        return Icons.description_outlined;
+      default:
+        return Icons.article_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(children: [
+        Icon(_typeIcon, size: 18, color: AppColors.info),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(resource.title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: resource.isCompleted
+                            ? AppColors.textMuted
+                            : AppColors.textPrimary,
+                        decoration: resource.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                        fontWeight: FontWeight.w600,
+                      )),
+              if (resource.platform.isNotEmpty)
+                Text(resource.platform,
+                    style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: onBookmarkToggle,
+          icon: Icon(
+            resource.isBookmarked
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
+            size: 18,
+            color:
+                resource.isBookmarked ? AppColors.primary : AppColors.textMuted,
+          ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: onCompleteToggle,
+          icon: Icon(
+            resource.isCompleted
+                ? Icons.check_circle_rounded
+                : Icons.check_circle_outline_rounded,
+            size: 18,
+            color:
+                resource.isCompleted ? AppColors.success : AppColors.textMuted,
+          ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ]),
+    );
+  }
+}
+
 class _PhaseCard extends StatelessWidget {
   final String roadmapId;
   final int phaseIndex;
   final PhaseModel phase;
   final bool isExpanded;
-  final Map<String, bool> skillStates;
   final VoidCallback onToggle;
-  final void Function(int skillIndex, String name, bool currentVal) onSkillToggle;
+  final void Function(String resourceUrl, bool nextVal)
+      onResourceBookmarkToggle;
+  final void Function(String resourceUrl, bool nextVal)
+      onResourceCompleteToggle;
 
   const _PhaseCard({
     required this.roadmapId,
     required this.phaseIndex,
     required this.phase,
     required this.isExpanded,
-    required this.skillStates,
     required this.onToggle,
-    required this.onSkillToggle,
+    required this.onResourceBookmarkToggle,
+    required this.onResourceCompleteToggle,
   });
 
   @override
@@ -354,7 +521,6 @@ class _PhaseCard extends StatelessWidget {
     final isLocked = status == 'locked';
     final isCompleted = status == 'completed';
     final isActive = status == 'active';
-    final skills = phase.skills;
     final subtopics = phase.subtopics;
 
     Color borderColor = AppColors.border;
@@ -364,21 +530,21 @@ class _PhaseCard extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       decoration: BoxDecoration(
-        color: isLocked ? AppColors.surface.withOpacity(0.5) : AppColors.surface,
+        color:
+            isLocked ? AppColors.surface.withOpacity(0.5) : AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: borderColor, width: isActive ? 1.5 : 1),
       ),
       child: Column(children: [
-        // ── Header row ────────────────────────────
         InkWell(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
           onTap: isLocked ? null : onToggle,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(children: [
-              // Phase number circle
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: isLocked
                       ? AppColors.surfaceVariant
@@ -389,142 +555,172 @@ class _PhaseCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: isCompleted
-                      ? const Icon(Icons.check_rounded, color: AppColors.success, size: 20)
+                      ? const Icon(Icons.check_rounded,
+                          color: AppColors.success, size: 20)
                       : isLocked
-                          ? const Icon(Icons.lock_rounded, color: AppColors.textMuted, size: 18)
+                          ? const Icon(Icons.lock_rounded,
+                              color: AppColors.textMuted, size: 18)
                           : Text('${phase.number}',
-                              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                              style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(phase.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: isLocked ? AppColors.textMuted : AppColors.textPrimary,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 3),
-                Row(children: [
-                  _DiffBadge(phase.difficulty),
-                  const SizedBox(width: 6),
-                  Text('~${phase.estimatedWeeks} weeks',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  if (isCompleted && phase.quizScore != null) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text('${phase.quizScore}% quiz',
-                          style: const TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ]),
-              ])),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(phase.title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                color: isLocked
+                                    ? AppColors.textMuted
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      _DiffBadge(phase.difficulty),
+                      const SizedBox(width: 6),
+                      Text('~${phase.estimatedWeeks} weeks',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      if (isCompleted && phase.quizScore != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text('${phase.quizScore}% quiz',
+                              style: const TextStyle(
+                                  color: AppColors.success,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ]),
+                  ])),
               if (!isLocked)
                 Icon(
-                  isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
                   color: AppColors.textMuted,
                 ),
             ]),
           ),
         ),
-
-        // ── Expanded content ──────────────────────
         if (isExpanded && !isLocked) ...[
           const Divider(height: 1, color: AppColors.border),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Summary
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (phase.summary != null)
                 Text(phase.summary!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.55)),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(height: 1.55)),
               const SizedBox(height: 16),
-
-              // Sub-topics
-              Text('Sub-topics', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13)),
+              Text('Sub-topics',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontSize: 13)),
               const SizedBox(height: 8),
               ...(subtopics.map((s) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.circle, size: 6, color: AppColors.primary),
-                  const SizedBox(width: 10),
-                  Expanded(child: RichText(text: TextSpan(
-                    text: '${s['name']}: ',
-                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
-                    children: [TextSpan(text: s['desc'] as String? ?? '',
-                        style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w400))],
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.circle,
+                              size: 6, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: RichText(
+                                  text: TextSpan(
+                            text: '${s['title']}: ',
+                            style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13),
+                            children: [
+                              TextSpan(
+                                  text: s['description'] as String? ?? '',
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w400))
+                            ],
+                          ))),
+                        ]),
                   ))),
+              const SizedBox(height: 16),
+              if (phase.resources.isNotEmpty) ...[
+                Text('Resources',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontSize: 13)),
+                const SizedBox(height: 8),
+                ...phase.resources.map((r) => _ResourceTile(
+                      resource: r,
+                      onBookmarkToggle: () =>
+                          onResourceBookmarkToggle(r.url, !r.isBookmarked),
+                      onCompleteToggle: () =>
+                          onResourceCompleteToggle(r.url, !r.isCompleted),
+                    )),
+                const SizedBox(height: 16),
+              ],
+              if (isActive)
+                Column(children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push(
+                        '/roadmaps/$roadmapId/tasks/${phase.number}',
+                      ),
+                      icon: const Icon(Icons.checklist_rounded, size: 16),
+                      label: const Text("Today's Tasks"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.info,
+                        side: const BorderSide(color: AppColors.info),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          context.push('/quiz/$roadmapId/${phase.number}'),
+                      icon: const Icon(Icons.quiz_rounded,
+                          size: 16, color: Colors.white),
+                      label: const Text('Take Quiz',
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
                 ]),
-              ))),
-
-              const SizedBox(height: 16),
-
-              // Skills checklist
-              Text('Skills', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13)),
-              const SizedBox(height: 8),
-              ...skills.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final s = entry.value;
-                final name = s.name;
-                final done = skillStates[name] ?? false;
-                return InkWell(
-                  onTap: isActive ? () => onSkillToggle(idx, name, done) : null,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                    child: Row(children: [
-                      Icon(done ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                          color: done ? AppColors.success : AppColors.textMuted, size: 20),
-                      const SizedBox(width: 10),
-                      Text(name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: done ? AppColors.success : AppColors.textPrimary,
-                              decoration: done ? TextDecoration.lineThrough : null)),
-                    ]),
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 16),
-
-              // Action buttons
-              if (isActive) Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/resources'),
-                    icon: const Icon(Icons.book_outlined, size: 16),
-                    label: const Text('Resources'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.info,
-                      side: const BorderSide(color: AppColors.info),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
+              if (isLocked || !isActive)
+                Center(
+                  child: Text(
+                      '🔒 Pass Phase ${phase.number - 1} quiz to unlock',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.textMuted)),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => context.push(
-                      '/quiz/${phase.number}',
-                      extra: {'roadmapId': roadmapId},
-                    ),
-                    icon: const Icon(Icons.quiz_rounded, size: 16, color: Colors.white),
-                    label: const Text('Take Quiz', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-              ]),
-
-              if (isLocked || !isActive) Center(
-                child: Text('🔒 Pass Phase ${phase.number - 1} quiz to unlock',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
-              ),
             ]),
           ),
         ],
@@ -540,15 +736,23 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (status) {
-      case 'active': color = AppColors.success; break;
-      case 'paused': color = AppColors.warning; break;
-      default: color = AppColors.primary;
+      case 'active':
+        color = AppColors.success;
+        break;
+      case 'paused':
+        color = AppColors.warning;
+        break;
+      default:
+        color = AppColors.primary;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(6)),
       child: Text(status[0].toUpperCase() + status.substring(1),
-          style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w600, fontSize: 11)),
     );
   }
 }
@@ -560,14 +764,23 @@ class _DiffBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (difficulty) {
-      case 'Beginner': color = AppColors.success; break;
-      case 'Advanced': color = AppColors.error; break;
-      default: color = AppColors.xpGold;
+      case 'Beginner':
+        color = AppColors.success;
+        break;
+      case 'Advanced':
+        color = AppColors.error;
+        break;
+      default:
+        color = AppColors.xpGold;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(5)),
-      child: Text(difficulty, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(5)),
+      child: Text(difficulty,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.w600)),
     );
   }
 }

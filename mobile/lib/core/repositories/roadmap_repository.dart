@@ -14,7 +14,13 @@ class RoadmapRepository {
           .map((r) => RoadmapModel.fromJson(r as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load roadmaps';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -28,7 +34,13 @@ class RoadmapRepository {
         response.data['data']['roadmap'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load roadmap';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -54,7 +66,13 @@ class RoadmapRepository {
         response.data['data']['roadmap'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Generation failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -74,7 +92,13 @@ class RoadmapRepository {
         response.data['data']['roadmap'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Regeneration failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -91,7 +115,13 @@ class RoadmapRepository {
         response.data['data']['roadmap'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Update failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -102,7 +132,13 @@ class RoadmapRepository {
     try {
       await _dio.delete('/roadmaps/$id');
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Deletion failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -125,7 +161,13 @@ class RoadmapRepository {
         response.data['data']['roadmap'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to update skill progress';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -150,7 +192,73 @@ class RoadmapRepository {
         response.data['data']['roadmap'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to update task progress';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
+      throw ApiException(e.response?.statusCode ?? 500, msg);
+    } catch (e) {
+      throw parseException(e);
+    }
+  }
+
+  Future<RoadmapModel> toggleResourceBookmark(
+    String id, {
+    required int phaseNumber,
+    required String resourceUrl,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/roadmaps/$id/resource-bookmark',
+        data: {
+          'phaseNumber': phaseNumber,
+          'resourceUrl': resourceUrl,
+        },
+      );
+      return RoadmapModel.fromJson(
+        response.data['data']['roadmap'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
+      throw ApiException(e.response?.statusCode ?? 500, msg);
+    } catch (e) {
+      throw parseException(e);
+    }
+  }
+
+  Future<RoadmapModel> markResourceComplete(
+    String id, {
+    required int phaseNumber,
+    required String resourceUrl,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/roadmaps/$id/resource-complete',
+        data: {
+          'phaseNumber': phaseNumber,
+          'resourceUrl': resourceUrl,
+        },
+      );
+      return RoadmapModel.fromJson(
+        response.data['data']['roadmap'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);

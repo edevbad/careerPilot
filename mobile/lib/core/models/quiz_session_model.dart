@@ -4,26 +4,35 @@ class QuizQuestionModel {
   final int id;
   final String questionType; // 'mcq' | 'truefalse'
   final String questionText;
-  final List<String> options; // Empty for truefalse
+  final Map<String,String> options; // Empty for truefalse
+  final String? answerToken; // needed for AI-question grading
 
   const QuizQuestionModel({
     required this.id,
     required this.questionType,
     required this.questionText,
     required this.options,
+    this.answerToken
   });
 
-  bool get isTrueFalse => questionType == 'truefalse';
+  bool get isTrueFalse => questionType == 'true-false';
   bool get isMcq => questionType == 'mcq';
 
   factory QuizQuestionModel.fromJson(Map<String, dynamic> json) {
+    final rawOptions = json['options'];
+    final options = <String, String>{};
+    if (rawOptions is Map) {
+      rawOptions.forEach((key, value) {
+        options[key.toString()] = value.toString();
+      });
+    }
+
+   
     return QuizQuestionModel(
       id: json['id'] as int? ?? 0,
       questionType: json['questionType'] as String? ?? 'mcq',
       questionText: json['questionText'] as String? ?? '',
-      options: (json['options'] as List<dynamic>? ?? [])
-          .map((o) => o.toString())
-          .toList(),
+      options: options,
     );
   }
 }

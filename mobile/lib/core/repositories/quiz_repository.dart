@@ -17,7 +17,13 @@ class QuizRepository {
         response.data['data'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load quiz session';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -42,7 +48,13 @@ class QuizRepository {
         response.data['data'] as Map<String, dynamic>? ?? response.data ?? {},
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Quiz submission failed';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -54,12 +66,19 @@ class QuizRepository {
     int phaseNumber,
   ) async {
     try {
-      final response = await _dio.get('/quizzes/$roadmapId/phase/$phaseNumber/results');
+      final response =
+          await _dio.get('/quizzes/$roadmapId/phase/$phaseNumber/results');
       return QuizResultsResponse.fromJson(
         response.data['data'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load quiz results';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -71,12 +90,19 @@ class QuizRepository {
     int phaseNumber,
   ) async {
     try {
-      final response = await _dio.get('/quizzes/$roadmapId/phase/$phaseNumber/retake-status');
+      final response = await _dio
+          .get('/quizzes/$roadmapId/phase/$phaseNumber/retake-status');
       return RetakeStatusModel.fromJson(
         response.data['data'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load retake status';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);

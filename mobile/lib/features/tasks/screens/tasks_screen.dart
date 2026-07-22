@@ -7,9 +7,18 @@ import '../../../core/repositories/task_repository.dart';
 import '../../../core/models/task_model.dart';
 import '../../../core/models/task_history_model.dart';
 import '../../../core/repositories/progress_repository.dart';
+import '../../../core/repositories/roadmap_repository.dart';
+import '../../../core/models/roadmap_model.dart';
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  final String? initialRoadmapId;
+  final int? initialPhaseNumber;
+
+  const TasksScreen({
+    super.key,
+    this.initialRoadmapId,
+    this.initialPhaseNumber,
+  });
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
@@ -17,8 +26,13 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   final _taskRepository = TaskRepository();
   final _progressRepository = ProgressRepository();
+  final _roadmapRepository = RoadmapRepository();
+
   List<TaskModel> tasks = [];
   List<TaskHistoryModel> _history = [];
+  List<RoadmapModel> _roadmaps = [];
+  String? _selectedRoadmapId; // null = "All"
+
   bool _calendarExpanded = false;
   bool _isLoading = true;
   String? _error;
@@ -27,7 +41,23 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   void initState() {
     super.initState();
+     _selectedRoadmapId = widget.initialRoadmapId; // pre-select from route
+    _loadRoadmaps();
     _loadTasksData();
+  }
+
+  Future<void> _loadRoadmaps() async {
+    try {
+      final roadmaps = await _roadmapRepository.getRoadmaps();
+      if (mounted) {
+        setState(() {
+          _roadmaps = roadmaps;
+        });
+      }
+    } catch (e) {
+      // Non-fatal: filter chips just won't show if this fails
+      debugPrint('Failed to load roadmaps: $e');
+    }
   }
 
   Future<void> _loadTasksData() async {
@@ -37,7 +67,9 @@ class _TasksScreenState extends State<TasksScreen> {
     });
 
     try {
-      final taskResult = await _taskRepository.getTodaysTasks();
+      final taskResult = await _taskRepository.getTodaysTasks(
+        roadmapId: _selectedRoadmapId,
+      );
       final progressSummary = await _progressRepository.getSummary();
 
       final now = DateTime.now();
@@ -68,12 +100,17 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
+  void _onRoadmapFilterSelected(String? roadmapId) {
+    if (_selectedRoadmapId == roadmapId) return;
+    setState(() => _selectedRoadmapId = roadmapId);
+    _loadTasksData();
+  }
+
   Future<void> _completeTask(int index) async {
     final task = tasks[index];
     try {
       final result = await _taskRepository.completeTask(task.id);
 
-      // Update state with result
       setState(() {
         tasks[index] = result.task;
         _streak = result.streak;
@@ -222,6 +259,17 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ],
             ),
+
+            // ── Roadmap filter chips ──────────────
+            if (_roadmaps.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _RoadmapFilterChips(
+                  roadmaps: _roadmaps,
+                  selectedRoadmapId: _selectedRoadmapId,
+                  onSelected: _onRoadmapFilterSelected,
+                ),
+              ),
+
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
@@ -263,6 +311,25 @@ class _TasksScreenState extends State<TasksScreen> {
                         )),
                     const SizedBox(height: 16),
                   ],
+
+                  // ── Empty state when a filter yields nothing ──
+                  if (active.isEmpty && allDone.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Column(children: [
+                          Icon(Icons.task_alt_rounded,
+                              size: 40, color: AppColors.textMuted),
+                          const SizedBox(height: 10),
+                          Text(
+                            _selectedRoadmapId == null
+                                ? 'No tasks for today'
+                                : 'No tasks for this roadmap today',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ]),
+                      ),
+                    ),
 
                   // ── Completed / Skipped tasks ──────
                   if (allDone.isNotEmpty) ...[
@@ -312,6 +379,119 @@ class _TasksScreenState extends State<TasksScreen> {
     return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
   }
 }
+
+// ── Roadmap filter chips ──────────────────────────────
+class _RoadmapFilterChips extends StatelessWidget {
+  final List<RoadmapModel> roadmaps;
+  final String? selectedRoadmapId;
+  final ValueChanged<String?> onSelected;
+
+  const _RoadmapFilterChips({
+    required this.roadmaps,
+    required this.selectedRoadmapId,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
+      child: SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          children: [
+            _FilterChip(
+              label: 'All',
+              selected: selectedRoadmapId == null,
+              onTap: () => onSelected(null),
+            ),
+            const SizedBox(width: 8),
+            ...roadmaps.map((r) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _FilterChip(
+                    label: r.targetCareer,
+                    selected: selectedRoadmapId == r.id,
+                    onTap: () => onSelected(r.id),
+                  ),
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: selected ? AppColors.primaryGradient : null,
+          color: selected ? null : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? Colors.transparent : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// (rest of the file — _StreakCalendar, _ProgressSummary, _SectionHeader,
+// _TaskCard, _MiniChip, _DoneTaskRow, _SkipSheet — unchanged from your original)
+
+  String _todayDate() {
+    final now = DateTime.now();
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
+  }
 
 // Change the widget to accept history
 class _StreakCalendar extends StatelessWidget {

@@ -435,17 +435,17 @@ class _QuestionPage extends StatelessWidget {
 }
 
 class _McqOptions extends StatelessWidget {
-  final List<String> options;
+  final Map<String,String> options;
   final String? selected;
   final ValueChanged<String> onSelect;
   const _McqOptions({required this.options, required this.selected, required this.onSelect});
 
   @override
   Widget build(BuildContext context) => Column(
-        children: options.asMap().entries.map((e) {
+        children: options.entries.map((e) {
           // The API returns option strings like "A", "B", "C", "D" — we use them directly
+          final optionKey = e.key; // A, B, C, D
           final optionLabel = e.value;
-          final optionKey = String.fromCharCode(65 + e.key); // A, B, C, D
           final isSelected = selected == optionKey;
           return GestureDetector(
             onTap: () => onSelect(optionKey),

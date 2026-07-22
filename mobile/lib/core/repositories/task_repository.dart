@@ -15,7 +15,8 @@ class TaskRepository {
       if (roadmapId != null) {
         queryParams['roadmapId'] = roadmapId;
       }
-      final response = await _dio.get('/tasks/today', queryParameters: queryParams);
+      final response =
+          await _dio.get('/tasks/today', queryParameters: queryParams);
       final tasksData = response.data['data']['tasks'] as List<dynamic>? ?? [];
       final tasks = tasksData
           .map((t) => TaskModel.fromJson(t as Map<String, dynamic>))
@@ -25,14 +26,21 @@ class TaskRepository {
       );
       return (tasks: tasks, summary: summary);
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load today\'s tasks';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
     }
   }
 
-  Future<({TaskModel task, int xpEarned, int streak})> completeTask(String id) async {
+  Future<({TaskModel task, int xpEarned, int streak})> completeTask(
+      String id) async {
     try {
       final response = await _dio.patch('/tasks/$id/complete');
       final task = TaskModel.fromJson(
@@ -42,7 +50,13 @@ class TaskRepository {
       final streak = response.data['data']['streak'] as int? ?? 0;
       return (task: task, xpEarned: xpEarned, streak: streak);
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to complete task';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -58,7 +72,13 @@ class TaskRepository {
         response.data['data']['task'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to skip task';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);
@@ -74,12 +94,19 @@ class TaskRepository {
         'startDate': startDate,
         'endDate': endDate,
       });
-      final historyData = response.data['data']['history'] as List<dynamic>? ?? [];
+      final historyData =
+          response.data['data']['history'] as List<dynamic>? ?? [];
       return historyData
           .map((h) => TaskHistoryModel.fromJson(h as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      final msg = e.response?.data['message'] ?? 'Failed to load task history';
+      String msg = 'Something went wrong';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data is String && data.isNotEmpty) {
+        msg = 'Server error (${e.response?.statusCode})';
+      }
       throw ApiException(e.response?.statusCode ?? 500, msg);
     } catch (e) {
       throw parseException(e);

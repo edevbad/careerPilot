@@ -19,15 +19,17 @@ class ProgressSummaryModel {
   });
 
   factory ProgressSummaryModel.fromJson(Map<String, dynamic> json) {
+    int toInt(dynamic v) => (v as num?)?.toInt() ?? 0;
+    double toDouble(dynamic v) => (v as num?)?.toDouble() ?? 0.0;
+
     return ProgressSummaryModel(
-      totalXp: json['totalXp'] as int? ?? json['xp'] as int? ?? 0,
-      streak: json['streak'] as int? ?? 0,
-      longestStreak: json['longestStreak'] as int? ?? 0,
-      tasksCompleted: json['tasksCompleted'] as int? ?? 0,
-      quizzesPassed: json['quizzesPassed'] as int? ?? 0,
-      roadmapsGenerated: json['roadmapsGenerated'] as int? ?? 0,
-      overallCompletion:
-          (json['overallCompletion'] as num?)?.toDouble() ?? 0.0,
+      totalXp: toInt(json['totalXp'] ?? json['xp']),
+      streak: toInt(json['streak']),
+      longestStreak: toInt(json['longestStreak']),
+      tasksCompleted: toInt(json['tasksCompleted']),
+      quizzesPassed: toInt(json['quizzesPassed']),
+      roadmapsGenerated: toInt(json['roadmapsGenerated']),
+      overallCompletion: toDouble(json['overallCompletion']),
     );
   }
 

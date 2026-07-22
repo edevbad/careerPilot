@@ -37,11 +37,52 @@ class RoadmapDailyTask {
   }
 }
 
+/// Represents a single learning resource within a roadmap phase.
+class ResourceModel {
+  final String title;
+  final String url;
+  final String type; // 'video' | 'article' | 'course' | 'documentation'
+  final String platform;
+  final bool isBookmarked;
+  final bool isCompleted;
+
+  const ResourceModel({
+    required this.title,
+    required this.url,
+    required this.type,
+    required this.platform,
+    required this.isBookmarked,
+    required this.isCompleted,
+  });
+
+  factory ResourceModel.fromJson(Map<String, dynamic> json) {
+    return ResourceModel(
+      title: json['title'] as String? ?? '',
+      url: json['url'] as String? ?? '',
+      type: json['type'] as String? ?? 'article',
+      platform: json['platform'] as String? ?? '',
+      isBookmarked: json['isBookmarked'] as bool? ?? false,
+      isCompleted: json['isCompleted'] as bool? ?? false,
+    );
+  }
+
+  ResourceModel copyWith({bool? isBookmarked, bool? isCompleted}) {
+    return ResourceModel(
+      title: title,
+      url: url,
+      type: type,
+      platform: platform,
+      isBookmarked: isBookmarked ?? this.isBookmarked,
+      isCompleted: isCompleted ?? this.isCompleted,
+    );
+  }
+}
+
 /// Represents a single phase within a roadmap.
 class PhaseModel {
   final int number;
   final String title;
-  final String status; // 'completed' | 'active' | 'locked'
+  final String status;
   final int? quizScore;
   final int estimatedWeeks;
   final String difficulty;
@@ -51,6 +92,7 @@ class PhaseModel {
   final List<Map<String, dynamic>> subtopics;
   final List<String> objectives;
   final List<RoadmapDailyTask> dailyTasks;
+  final List<ResourceModel> resources; // added
 
   const PhaseModel({
     required this.number,
@@ -65,6 +107,7 @@ class PhaseModel {
     required this.subtopics,
     required this.objectives,
     required this.dailyTasks,
+    required this.resources, // added
   });
 
   factory PhaseModel.fromJson(Map<String, dynamic> json) {
@@ -72,7 +115,7 @@ class PhaseModel {
         .map((s) => SkillModel.fromJson(s as Map<String, dynamic>))
         .toList();
 
-    final subtopicsList = (json['subtopics'] as List<dynamic>? ?? [])
+    final subtopicsList = (json['subTopics'] as List<dynamic>? ?? [])
         .map((s) => s as Map<String, dynamic>)
         .toList();
 
@@ -84,12 +127,16 @@ class PhaseModel {
         .map((t) => RoadmapDailyTask.fromJson(t as Map<String, dynamic>))
         .toList();
 
+    final resourcesList = (json['resources'] as List<dynamic>? ?? [])
+        .map((r) => ResourceModel.fromJson(r as Map<String, dynamic>))
+        .toList();
+
     return PhaseModel(
-      number: json['number'] as int? ?? 0,
+      number: (json['phaseNumber'] as num?)?.toInt() ?? 0,
       title: json['title'] as String? ?? '',
       status: json['status'] as String? ?? 'locked',
-      quizScore: json['quizScore'] as int?,
-      estimatedWeeks: json['estimatedWeeks'] as int? ?? 0,
+      quizScore: (json['quizScore'] as num?)?.toInt(),
+      estimatedWeeks: (json['estimatedWeeks'] as num?)?.toInt() ?? 0,
       difficulty: json['difficulty'] as String? ?? 'Intermediate',
       completion: (json['completion'] as num?)?.toDouble() ?? 0.0,
       summary: json['summary'] as String?,
@@ -97,10 +144,15 @@ class PhaseModel {
       subtopics: subtopicsList,
       objectives: objectivesList,
       dailyTasks: dailyTasksList,
+      resources: resourcesList, // added
     );
   }
 
-  PhaseModel copyWith({List<SkillModel>? skills, String? status}) {
+  PhaseModel copyWith({
+    List<SkillModel>? skills,
+    String? status,
+    List<ResourceModel>? resources, // added
+  }) {
     return PhaseModel(
       number: number,
       title: title,
@@ -114,9 +166,12 @@ class PhaseModel {
       subtopics: subtopics,
       objectives: objectives,
       dailyTasks: dailyTasks,
+      resources: resources ?? this.resources, // added
     );
   }
 }
+
+
 
 /// Full roadmap domain model matching the server response.
 class RoadmapModel {
@@ -164,7 +219,7 @@ class RoadmapModel {
       isActive: json['isActive'] as bool? ?? true,
       overallCompletion:
           (json['overallCompletion'] as num?)?.toDouble() ?? 0.0,
-      activePhaseNumber: json['activePhaseNumber'] as int? ?? 1,
+      activePhaseNumber: (json['activePhaseNumber'] as num?)?.toInt() ?? 1,
       skillLevel: json['skillLevel'] as String?,
       duration: json['duration'] as String?,
       interests: json['interests'] as String?,
