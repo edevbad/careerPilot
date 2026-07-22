@@ -20,56 +20,57 @@ const notFound = (req, res, next) => {
 }
 
 const errorHandler = (err, req, res, next) => {
-  // Log full stack in all environments — use log shipper to filter in prod
   Logger.error({
     message: err.message,
-    stack:   err.stack,
-    method:  req.method,
-    url:     req.originalUrl,
-    ip:      req.ip,
+    stack: err.stack,
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip,
   });
 
   let statusCode = err.statusCode || 500;
-  let message    = err.message    || 'Internal Server Error';
+  let message = err.message || 'Internal Server Error';
   let errors;
 
   // ── Mongoose: invalid ObjectId ─────────────────────────────────────────────
   if (err.name === 'CastError') {
     statusCode = 400;
-    message    = `Invalid value for field '${err.path}'`;
+    message = `Invalid value for field '${err.path}'`;
   }
 
   // ── Mongoose: unique key violation ─────────────────────────────────────────
   if (err.code === 11000) {
     statusCode = 409;
     const field = Object.keys(err.keyValue || {})[0] || 'field';
-    message    = `${field} is already in use`;
+    message = `${field} is already in use`;
   }
 
   // ── Mongoose: schema validation error ──────────────────────────────────────
   if (err.name === 'ValidationError') {
     statusCode = 400;
-    errors     = Object.values(err.errors).map((e) => ({
-      field:   e.path,
+    errors = Object.values(err.errors).map((e) => ({
+      field: e.path,
       message: e.message,
     }));
-    message    = 'Validation failed';
+    message = errors.length === 1
+      ? errors[0].message
+      : `Validation failed: ${errors.map(e => e.message).join('; ')}`;
   }
 
   // ── Zod validation error ───────────────────────────────────────────────────
   if (err.name === 'ZodError') {
     statusCode = 422;
-    errors     = err.errors.map((e) => ({
-      field:   e.path.join('.'),
+    errors = err.errors.map((e) => ({
+      field: e.path.join('.'),
       message: e.message,
     }));
-    message    = 'Input validation failed';
+    message = 'Input validation failed';
   }
 
   // ── Multer: file upload errors ─────────────────────────────────────────────
   if (err.name === 'MulterError') {
     statusCode = 400;
-    message    = err.code === 'LIMIT_FILE_SIZE'
+    message = err.code === 'LIMIT_FILE_SIZE'
       ? 'File is too large'
       : err.message;
   }
@@ -77,56 +78,52 @@ const errorHandler = (err, req, res, next) => {
   // ── JWT: tampered token ────────────────────────────────────────────────────
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
-    message    = 'Invalid token';
+    message = 'Invalid token';
   }
 
   // ── JWT: expired token ─────────────────────────────────────────────────────
   if (err.name === 'TokenExpiredError') {
     statusCode = 401;
-    message    = 'Token has expired';
+    message = 'Token has expired';
   }
 
   // ── SyntaxError: malformed JSON body ──────────────────────────────────────
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     statusCode = 400;
-    message    = 'Invalid JSON in request body';
+    message = 'Invalid JSON in request body';
   }
 
   // ── CORS error ────────────────────────────────────────────────────────────
   if (err.message && err.message.startsWith('CORS:')) {
     statusCode = 403;
-    message    = err.message;
+    message = err.message;
   }
 
-  if (err.statusCode === 429) {
-  return res.status(429).json(
-    new ApiResponse(429, { retakeAvailableAt: err.retakeAvailableAt }, err.message)
-  );
+  // ── Gemini / external AI errors ────────────────────────────────────────────
+  if (statusCode === 429) {
+    message = message || 'Too many requests. Please wait and try again.';
+  }
+
+  if (statusCode === 503) {
+    message = message || 'AI service is temporarily unavailable.';
+  }
+
+  if (statusCode === 502) {
+    message = message || 'AI service returned an unexpected response.';
+  }
 
   // ── Generic 500 — scrub message in production to prevent info leakage ─────
   if (statusCode === 500 && process.env.NODE_ENV === 'production') {
     message = 'An unexpected error occurred. Please try again later.';
   }
 
-  
-   // Gemini / external AI errors
-  if (statusCode === 429) {
-    message = message || 'Too many requests. Please wait and try again.'
-  }
-
-  if (statusCode === 503) {
-    message = message || 'AI service is temporarily unavailable.'
-  }
-
-  if (statusCode === 502) {
-    message = message || 'AI service returned an unexpected response.'
-  }
-
-  
-}
-
   const body = { success: false, message };
   if (errors) body.errors = errors;
+
+  // Include retakeAvailableAt for cooldown errors so the client can show a timer
+  if (err.retakeAvailableAt) {
+    body.retakeAvailableAt = err.retakeAvailableAt;
+  }
 
   // Only expose stack trace in development
   if (process.env.NODE_ENV === 'development') {
@@ -138,8 +135,9 @@ const errorHandler = (err, req, res, next) => {
     return next(err);
   }
 
-
   res.status(statusCode).json(body);
 };
 
-module.exports = {errorHandler,notFound};
+module.exports = { errorHandler, notFound };
+
+module.exports = { errorHandler, notFound };

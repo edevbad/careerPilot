@@ -1,6 +1,7 @@
 const AppError = require('../../utils/appError')
-const Roadmap  = require('../../models/roadmap.model')
+const Roadmap = require('../../models/roadmap.model')
 const Progress = require('../../models/progress.model')
+const { findRoadmapTemplate} = require('./roadmap.templates')
 const {
   SYSTEM_INSTRUCTION,
   buildRoadmapPrompt,
@@ -22,7 +23,7 @@ const callGemini = async (prompt, maxRetries = 2) => {
 
   while (attempt <= maxRetries) {
     try {
-      const model  = getGeminiModel()
+      const model = getGeminiModel()
       const result = await model.generateContent({
         systemInstruction: SYSTEM_INSTRUCTION,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -45,8 +46,8 @@ const callGemini = async (prompt, maxRetries = 2) => {
       }
 
     } catch (err) {
-      const msg     = err.message || ''
-      const is429   = msg.includes('429') || msg.includes('Too Many Requests')
+      const msg = err.message || ''
+      const is429 = msg.includes('429') || msg.includes('Too Many Requests')
       const isQuota = msg.includes('quota')
 
       if ((is429 || isQuota) && attempt < maxRetries) {
@@ -96,29 +97,37 @@ const validateAIRoadmap = (data) => {
 
 const mapPhases = (aiPhases, preservedPhases = {}) =>
   aiPhases.map((phase, idx) => {
-    const phaseNum  = phase.phaseNumber ?? idx + 1
+    const phaseNum = phase.phaseNumber ?? idx + 1
     const preserved = preservedPhases[phaseNum] || {}
 
     return {
-      phaseNumber:      phaseNum,
-      title:            phase.title,
-      summary:          phase.summary          || '',
-      difficulty:       phase.difficulty,
-      estimatedWeeks:   phase.estimatedWeeks   ?? 2,
-      prerequisites:    phase.prerequisites    ?? (phaseNum > 1 ? [phaseNum - 1] : []),
+      phaseNumber: phaseNum,
+      title: phase.title,
+      summary: phase.summary || '',
+      difficulty: phase.difficulty,
+      estimatedWeeks: phase.estimatedWeeks ?? 2,
+      prerequisites: phase.prerequisites ?? (phaseNum > 1 ? [phaseNum - 1] : []),
       learningObjectives: (phase.learningObjectives || []).filter(Boolean),
       subTopics: (phase.subTopics || []).map((s, sIdx) => ({
-        order:       s.order       ?? sIdx + 1,
-        title:       s.title,
+        order: s.order ?? sIdx + 1,
+        title: s.title,
         description: s.description || '',
       })),
+      resources: (phase.resources || []).map(r => ({
+        title: r.title,
+        url: r.url,
+        type: r.type,
+        platform: r.platform || '',
+        isBookmarked: preserved.resources?.find(pr => pr.url === r.url)?.isBookmarked ?? false,
+        isCompleted: preserved.resources?.find(pr => pr.url === r.url)?.isCompleted ?? false,
+      })),
       // Preserve phase lifecycle fields on regenerate
-      status:               preserved.status      ?? 'locked',
-      unlockedAt:           preserved.unlockedAt  ?? null,
-      completedAt:          preserved.completedAt ?? null,
+      status: preserved.status ?? 'locked',
+      unlockedAt: preserved.unlockedAt ?? null,
+      completedAt: preserved.completedAt ?? null,
       skillCompletionPercent: preserved.skillCompletionPercent ?? 0,
-      quizRequired:         preserved.quizRequired         ?? true,
-      quizPassingScore:     preserved.quizPassingScore     ?? 70,
+      quizRequired: preserved.quizRequired ?? true,
+      quizPassingScore: preserved.quizPassingScore ?? 70,
     }
   })
 
@@ -127,12 +136,13 @@ const buildPreservedPhases = (existingPhases) => {
   const map = {}
   for (const phase of existingPhases) {
     map[phase.phaseNumber] = {
-      status:                 phase.status,
-      unlockedAt:             phase.unlockedAt,
-      completedAt:            phase.completedAt,
+      status: phase.status,
+      unlockedAt: phase.unlockedAt,
+      completedAt: phase.completedAt,
       skillCompletionPercent: phase.skillCompletionPercent,
-      quizRequired:           phase.quizRequired,
-      quizPassingScore:       phase.quizPassingScore,
+      quizRequired: phase.quizRequired,
+      quizPassingScore: phase.quizPassingScore,
+      resources: phase.resources || [],
     }
   }
   return map
@@ -141,15 +151,29 @@ const buildPreservedPhases = (existingPhases) => {
 // ─── Service Functions ───────────────────────────────────────────────────────
 
 const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, interests, startDate }) => {
-  const prompt = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })
-  const aiData = await callGemini(prompt)
-  validateAIRoadmap(aiData)
+  // Try a static template first — only skip Gemini if it fully satisfies validation
+  let aiData = findRoadmapTemplate(targetCareer, skillLevel, duration)
+
+  if (aiData) {
+    try {
+      validateAIRoadmap(aiData)
+    } catch (err) {
+      console.warn(`Template for "${targetCareer}"/${skillLevel} failed validation, falling back to Gemini:`, err.message)
+      aiData = null
+    }
+  }
+
+  if (!aiData) {
+    const prompt = buildRoadmapPrompt({ targetCareer, skillLevel, duration, interests, startDate })
+    aiData = await callGemini(prompt)
+    validateAIRoadmap(aiData)
+  }
 
   const phases = mapPhases(aiData.phases)
   // Phase 1 is always unlocked immediately — the pre-save hook also does this
   // but we set it here explicitly so the returned object is correct before save
   if (phases.length > 0) {
-    phases[0].status     = 'active'
+    phases[0].status = 'active'
     phases[0].unlockedAt = new Date()
   }
 
@@ -157,7 +181,7 @@ const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, int
     userId,
     targetCareer,
     skillLevel,
-    summary:  aiData.summary || '',
+    summary: aiData.summary || '',
     phases,
   })
 
@@ -167,11 +191,11 @@ const generateRoadmap = async (userId, { targetCareer, skillLevel, duration, int
     userId,
     roadmapId: roadmap._id,
     phaseProgress: roadmap.phases.map((p) => ({
-      phaseNumber:       p.phaseNumber,
-      skills:            [],
+      phaseNumber: p.phaseNumber,
+      skills: [],
       completionPercent: 0,
-      latestQuizScore:   null,
-      quizPassed:        false,
+      latestQuizScore: null,
+      quizPassed: false,
     })),
   })
 
@@ -190,11 +214,11 @@ const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
     .map((p) => p.phaseNumber)
 
   const prompt = buildRegeneratePrompt({
-    targetCareer:          existing.targetCareer,
-    skillLevel:            existing.skillLevel,
-    duration:              existing.duration,
-    interests:             existing.interests,
-    startDate:             existing.startDate?.toISOString().split('T')[0],
+    targetCareer: existing.targetCareer,
+    skillLevel: existing.skillLevel,
+    duration: existing.duration,
+    interests: existing.interests,
+    startDate: existing.startDate?.toISOString().split('T')[0],
     feedback,
     completedPhaseNumbers,
   })
@@ -204,16 +228,16 @@ const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
 
   // Preserve lifecycle state for all existing phases
   const preservedPhases = buildPreservedPhases(existing.phases)
-  const newPhases       = mapPhases(aiData.phases, preservedPhases)
+  const newPhases = mapPhases(aiData.phases, preservedPhases)
 
   // Ensure phase 1 is still active if it wasn't completed
   if (newPhases.length > 0 && newPhases[0].status === 'locked') {
-    newPhases[0].status     = 'active'
+    newPhases[0].status = 'active'
     newPhases[0].unlockedAt = existing.phases[0]?.unlockedAt ?? new Date()
   }
 
   existing.summary = aiData.summary || existing.summary
-  existing.phases  = newPhases
+  existing.phases = newPhases
 
   await existing.save()
 
@@ -226,11 +250,11 @@ const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
     for (const phase of newPhases) {
       if (!existingPhaseNums.has(phase.phaseNumber)) {
         progress.phaseProgress.push({
-          phaseNumber:       phase.phaseNumber,
-          skills:            [],
+          phaseNumber: phase.phaseNumber,
+          skills: [],
           completionPercent: 0,
-          latestQuizScore:   null,
-          quizPassed:        false,
+          latestQuizScore: null,
+          quizPassed: false,
         })
       }
     }
@@ -245,7 +269,7 @@ const regenerateRoadmap = async (userId, roadmapId, { feedback }) => {
 
 const getRoadmaps = async (userId) =>
   Roadmap.find({ userId, status: { $ne: 'archived' } })
-    .select('targetCareer skillLevel summary status completionPercent activePhaseNumber totalEstimatedWeeks createdAt')
+    .select('targetCareer skillLevel summary status completionPercent activePhaseNumber totalEstimatedWeeks createdAt phases')
     .sort({ createdAt: -1 })
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -290,6 +314,36 @@ const deleteRoadmap = async (userId, roadmapId) => {
     { status: 'skipped', skipReason: 'other' }
   )
 
+  return roadmap
+}
+
+const toggleResourceBookmark = async (userId, roadmapId, phaseNumber, resourceUrl) => {
+  const roadmap = await Roadmap.findOne({ _id: roadmapId, userId })
+  if (!roadmap) throw new AppError(404, 'Roadmap not found')
+
+  const phase = roadmap.phases.find(p => p.phaseNumber === phaseNumber)
+  if (!phase) throw new AppError(404, 'Phase not found')
+
+  const resource = phase.resources.find(r => r.url === resourceUrl)
+  if (!resource) throw new AppError(404, 'Resource not found')
+
+  resource.isBookmarked = !resource.isBookmarked
+  await roadmap.save()
+  return roadmap
+}
+
+const markResourceComplete = async (userId, roadmapId, phaseNumber, resourceUrl) => {
+  const roadmap = await Roadmap.findOne({ _id: roadmapId, userId })
+  if (!roadmap) throw new AppError(404, 'Roadmap not found')
+
+  const phase = roadmap.phases.find(p => p.phaseNumber === phaseNumber)
+  if (!phase) throw new AppError(404, 'Phase not found')
+
+  const resource = phase.resources.find(r => r.url === resourceUrl)
+  if (!resource) throw new AppError(404, 'Resource not found')
+
+  resource.isCompleted = true
+  await roadmap.save()
   return roadmap
 }
 
@@ -341,5 +395,7 @@ module.exports = {
   getRoadmapById,
   updateRoadmap,
   deleteRoadmap,
+  toggleResourceBookmark,
+  markResourceComplete,
   updatePhaseSkillCompletion,  // replaces updateSkillProgress + updateTaskProgress
 }
