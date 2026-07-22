@@ -29,4 +29,14 @@ class TaskHistoryModel {
       status: json['status'] as String? ?? 'pending',
     );
   }
+  // In task_history_model.dart
+factory TaskHistoryModel.empty(String date) => TaskHistoryModel(
+  date: date,
+  totalTasks: 0,
+  completedTasks: 0,
+  skippedTasks: 0,
+  pendingTasks: 0,
+  xpEarned: 0,
+  status: 'none',
+);
 }

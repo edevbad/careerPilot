@@ -20,6 +20,7 @@ class ApiClient {
   late final PersistCookieJar _cookieJar;
 
   static const String baseUrl = 'https://careerpilot-server.onrender.com/api';
+  // static const String baseUrl = 'http://10.210.59.109:5000/api';
 
   Future<void> init() async {
     final appDir = await getApplicationDocumentsDirectory();

@@ -212,7 +212,7 @@ class _TasksScreenState extends State<TasksScreen> {
                       const Icon(Icons.local_fire_department_rounded,
                           color: Colors.white, size: 16),
                       const SizedBox(width: 4),
-                      Text('7',
+                      Text('$_streak',
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -229,9 +229,7 @@ class _TasksScreenState extends State<TasksScreen> {
                   // ── Streak calendar ───────────────
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
-                    child: _calendarExpanded
-                        ? _StreakCalendar()
-                        : const SizedBox.shrink(),
+                   child: _calendarExpanded ? _StreakCalendar(history: _history) : const SizedBox.shrink(),
                   ),
 
                   const SizedBox(height: 16),
@@ -315,11 +313,40 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 }
 
-// ── Streak Calendar ───────────────────────────────────
+// Change the widget to accept history
 class _StreakCalendar extends StatelessWidget {
+  final List<TaskHistoryModel> history;
+  const _StreakCalendar({required this.history});
+
   @override
   Widget build(BuildContext context) {
-    final days = DummyData.streakDays;
+    // Build days from real history instead of DummyData
+    final now = DateTime.now();
+    final days = List.generate(7, (i) {
+      final date = now.subtract(Duration(days: 6 - i));
+      final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final entry = history.firstWhere(
+        (h) => h.date == dateKey,
+        orElse: () => TaskHistoryModel.empty(dateKey),
+      );
+
+      final isToday = i == 6;
+      String status;
+      if (isToday) {
+        status = 'today';
+      } else if (entry.completedTasks == entry.totalTasks && entry.totalTasks > 0) {
+        status = 'completed';
+      } else if (entry.completedTasks > 0) {
+        status = 'partial';
+      } else {
+        status = 'missed';
+      }
+
+      final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return {'label': weekdays[date.weekday - 1], 'status': status};
+    });
+
+    // Rest of build is the same — replace DummyData.streakDays with days
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.all(16),
@@ -330,48 +357,33 @@ class _StreakCalendar extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('7-Day Streak',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontSize: 13)),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13)),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: days.map((d) {
             Color c;
             switch (d['status']) {
-              case 'completed':
-                c = AppColors.success;
-                break;
-              case 'partial':
-                c = AppColors.xpGold;
-                break;
-              case 'today':
-                c = AppColors.primary;
-                break;
-              default:
-                c = AppColors.surfaceVariant;
+              case 'completed': c = AppColors.success; break;
+              case 'partial':   c = AppColors.xpGold;  break;
+              case 'today':     c = AppColors.primary;  break;
+              default:          c = AppColors.surfaceVariant;
             }
             return Column(children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 32, height: 32,
                 decoration: BoxDecoration(
                   color: c.withOpacity(0.15),
                   shape: BoxShape.circle,
                   border: Border.all(color: c, width: 1.5),
                 ),
                 child: d['status'] == 'completed'
-                    ? const Icon(Icons.check_rounded,
-                        size: 15, color: AppColors.success)
+                    ? const Icon(Icons.check_rounded, size: 15, color: AppColors.success)
                     : null,
               ),
               const SizedBox(height: 4),
               Text(d['label'] as String,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(fontSize: 10)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10)),
             ]);
           }).toList(),
         ),
@@ -379,7 +391,6 @@ class _StreakCalendar extends StatelessWidget {
     );
   }
 }
-
 // ── Progress summary ──────────────────────────────────
 class _ProgressSummary extends StatelessWidget {
   final int completed, total;
