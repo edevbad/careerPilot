@@ -1,98 +1,10 @@
-const Anthropic  = require("@anthropic-ai/sdk");
-const axios      = require("axios");
-const QuizResult = require("../../models/QuizResult");
-const Roadmap    = require("../../models/Roadmap");
-const Progress   = require("../../models/Progress");
-
-const client = new Anthropic();
-
-// Laravel API base — Quiz Questions live there
-const LARAVEL_API = process.env.LARAVEL_API_URL || "http://localhost:8000/api";
+const QuizResult = require("../../models/quizresult.model");
+const Roadmap    = require("../../models/roadmap.model");
+const Progress   = require("../../models/progress.model");
+const AppError = require("../../utils/appError");
 
 // ── Helpers ────────────────────────────────────────────────────
 
-// GEMINI HELPERS
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const parseRetryDelay = (msg, defaultMs = 15000) => {
-  const match = msg?.match(/retryDelay[^0-9]*(\d+)/);
-  return match ? parseInt(match[1], 10) * 1000 : defaultMs;
-};
-
-const callGemini = async (prompt, maxRetries = 2) => {
-  let attempt = 0;
-
-  while (attempt <= maxRetries) {
-    try {
-      const model = getGeminiModel();
-
-      const result = await model.generateContent({
-        systemInstruction:
-          "You are an AI career coach that always responds with valid JSON only.",
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-      });
-
-      const raw = result.response.text();
-
-      if (!raw?.trim()) {
-        throw new AppError(502, "AI returned an empty response.");
-      }
-
-      const cleaned = raw
-        .trim()
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/```\s*$/i, "")
-        .trim();
-
-      try {
-        return JSON.parse(cleaned);
-      } catch {
-        console.error("Unparseable Gemini response:", raw);
-        throw new AppError(502, "AI returned malformed JSON.");
-      }
-    } catch (err) {
-      const msg = err.message || "";
-      const is429 = msg.includes("429") || msg.includes("Too Many Requests");
-      const isQuota = msg.includes("quota");
-
-      if ((is429 || isQuota) && attempt < maxRetries) {
-        const delay = parseRetryDelay(msg, 20000);
-        console.warn(
-          `Gemini rate limit. Retrying in ${delay / 1000}s...`
-        );
-
-        await sleep(delay);
-        attempt++;
-        continue;
-      }
-
-      if (isQuota && msg.includes("limit: 0")) {
-        throw new AppError(
-          503,
-          "AI daily quota reached. Please try again tomorrow."
-        );
-      }
-
-      if (is429 || isQuota) {
-        throw new AppError(
-          429,
-          "AI service is busy. Please wait and try again."
-        );
-      }
-
-      if (err.statusCode) throw err;
-
-      throw new AppError(502, `AI service error: ${msg}`);
-    }
-  }
-};
 
 // GEMINI HELPERS
 
