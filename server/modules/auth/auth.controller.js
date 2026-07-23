@@ -49,7 +49,8 @@ exports.refreshToken = asyncHandler(async (req, res) => {
     if (!refreshToken) {
         throw new AppError(401,'No refresh token provided');
     }
-    const { accessToken, user } = await authService.refreshToken(refreshToken);
+    const { accessToken,refreshToken : newRefreshToken ,user } = await authService.refreshToken(refreshToken);
+    res.cookie("refreshToken", newRefreshToken, COOKIE_OPTIONS);
     res.status(200).json(new ApiResponse(200, { accessToken, user: sanitizeUser(user) }));
 });
 

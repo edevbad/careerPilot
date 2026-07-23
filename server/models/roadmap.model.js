@@ -113,6 +113,17 @@ const phaseSchema = new mongoose.Schema(
       max: 100,
       default: 0,
     },
+    resources: {
+      type: [{
+        title: { type: String, required: true, trim: true },
+        url: { type: String, required: true, trim: true },
+        type: { type: String, enum: ['video', 'article', 'course', 'documentation'], required: true },
+        platform: { type: String, trim: true, default: '' },
+        isBookmarked: { type: Boolean, default: false },
+        isCompleted: { type: Boolean, default: false },
+      }],
+      default: [],
+    },
   },
   {
     _id: true,
@@ -202,6 +213,8 @@ roadmapSchema.index({ userId: 1, targetCareer: 1 });
 
 // ── Virtual: active phase object ───────────────────────────────
 roadmapSchema.virtual("activePhase").get(function () {
+  if (!Array.isArray(this.phases)) return null;
+
   return this.phases.find((p) => p.phaseNumber === this.activePhaseNumber) || null;
 });
 
@@ -237,7 +250,7 @@ roadmapSchema.methods.unlockNextPhase = function () {
 };
 
 // ── Pre-save: compute totalEstimatedWeeks & first phase unlock ─
-roadmapSchema.pre("save", function (next) {
+roadmapSchema.pre("save", function () {
   if (this.isNew) {
     // Unlock phase 1 on creation
     if (this.phases.length > 0) {
@@ -250,8 +263,6 @@ roadmapSchema.pre("save", function (next) {
     (sum, p) => sum + (p.estimatedWeeks || 0),
     0
   );
-
-  next();
 });
 
 module.exports = mongoose.model("Roadmap", roadmapSchema);

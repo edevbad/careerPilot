@@ -186,7 +186,7 @@ quizResultSchema.statics.hasPassed = async function (userId, roadmapId, phaseNum
 };
 
 // ── Pre-save: compute derived fields ──────────────────────────
-quizResultSchema.pre("save", function (next) {
+quizResultSchema.pre("save", function () {
   // Score
   if (this.totalQuestions > 0) {
     this.score = Math.round((this.correctAnswers / this.totalQuestions) * 100);
@@ -209,7 +209,6 @@ quizResultSchema.pre("save", function (next) {
     this.retakeAvailableAt = cooldown;
   }
 
-  next();
 });
 
 module.exports = mongoose.model("QuizResult", quizResultSchema);

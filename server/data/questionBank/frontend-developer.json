@@ -1,0 +1,167 @@
+{
+  "career": "Frontend Developer",
+  "phases": {
+    "1": [
+      {
+        "id": 100001,
+        "questionText": "What does HTML stand for?",
+        "questionType": "mcq",
+        "options": {
+          "A": "Hyper Trainer Marking Language",
+          "B": "Hyper Text Markup Language",
+          "C": "High Tech Modern Language",
+          "D": "Hyperlinks and Text Markup Language"
+        },
+        "correctAnswer": "B",
+        "explanation": "HTML stands for Hyper Text Markup Language, the standard markup language for creating web pages.",
+        "difficulty": "easy",
+        "topic": "HTML Basics"
+      },
+      {
+        "id": 100002,
+        "questionText": "CSS specificity of an ID selector is higher than a class selector.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "A",
+        "explanation": "ID selectors (100) have higher specificity than class selectors (10) in the CSS cascade.",
+        "difficulty": "easy",
+        "topic": "CSS Basics"
+      },
+      {
+        "id": 100003,
+        "questionText": "Which HTML tag is used to define an unordered list?",
+        "questionType": "mcq",
+        "options": {
+          "A": "<ol>",
+          "B": "<list>",
+          "C": "<ul>",
+          "D": "<li>"
+        },
+        "correctAnswer": "C",
+        "explanation": "<ul> defines an unordered (bulleted) list; <li> defines each list item within it.",
+        "difficulty": "easy",
+        "topic": "HTML Basics"
+      },
+      {
+        "id": 100004,
+        "questionText": "The 'box-sizing: border-box' property includes padding and border in an element's total width and height.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "A",
+        "explanation": "border-box makes width/height calculations include content, padding, and border, avoiding layout surprises.",
+        "difficulty": "medium",
+        "topic": "CSS Basics"
+      },
+      {
+        "id": 100005,
+        "questionText": "What will `console.log(typeof null)` output in JavaScript?",
+        "questionType": "mcq",
+        "options": {
+          "A": "\"null\"",
+          "B": "\"undefined\"",
+          "C": "\"object\"",
+          "D": "\"number\""
+        },
+        "correctAnswer": "C",
+        "explanation": "This is a well-known JavaScript quirk: typeof null returns \"object\" due to a legacy bug in the language.",
+        "difficulty": "medium",
+        "topic": "JavaScript Fundamentals"
+      },
+      {
+        "id": 100006,
+        "questionText": "Review this code snippet:\n\nfunction add(a, b) {\n  return a + b\n}\nconsole.log(add(\"2\", 3));\n\nWhat is the output and why?",
+        "questionType": "code-review",
+        "options": {
+          "A": "5, because JS coerces the string to a number",
+          "B": "\"23\", because + concatenates when either operand is a string",
+          "C": "NaN, because you can't add a string and a number",
+          "D": "TypeError is thrown"
+        },
+        "correctAnswer": "B",
+        "explanation": "The + operator concatenates strings when either operand is a string, so \"2\" + 3 becomes \"23\".",
+        "difficulty": "medium",
+        "topic": "JavaScript Fundamentals"
+      },
+      {
+        "id": 100007,
+        "questionText": "Which CSS property is used to create space between flex items along the main axis?",
+        "questionType": "mcq",
+        "options": {
+          "A": "align-items",
+          "B": "justify-content",
+          "C": "flex-wrap",
+          "D": "gap"
+        },
+        "correctAnswer": "D",
+        "explanation": "The `gap` property (or `column-gap`) creates spacing between flex or grid items directly.",
+        "difficulty": "medium",
+        "topic": "CSS Layout"
+      },
+      {
+        "id": 100008,
+        "questionText": "Semantic HTML elements like <article> and <nav> primarily exist to improve accessibility and SEO, not visual styling.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "A",
+        "explanation": "Semantic tags convey meaning to browsers, assistive tech, and search engines — they carry no default visual difference from a <div>.",
+        "difficulty": "easy",
+        "topic": "HTML Basics"
+      },
+      {
+        "id": 100009,
+        "questionText": "In JavaScript, what does `const` guarantee about a variable?",
+        "questionType": "mcq",
+        "options": {
+          "A": "The value can never change in any way",
+          "B": "The binding cannot be reassigned, but object/array contents can still mutate",
+          "C": "It is hoisted and initialized to undefined",
+          "D": "It behaves exactly like var"
+        },
+        "correctAnswer": "B",
+        "explanation": "const prevents reassignment of the variable binding, but if the value is an object or array, its properties/elements can still be mutated.",
+        "difficulty": "medium",
+        "topic": "JavaScript Fundamentals"
+      },
+      {
+        "id": 100010,
+        "questionText": "Review this code snippet:\n\nconst arr = [1, 2, 3];\nconst doubled = arr.map(n => n * 2);\nconsole.log(arr);\n\nWhat does this log?",
+        "questionType": "code-review",
+        "options": {
+          "A": "[2, 4, 6], because map mutates the original array",
+          "B": "[1, 2, 3], because map returns a new array and leaves the original unchanged",
+          "C": "undefined",
+          "D": "An error, because map requires a second argument"
+        },
+        "correctAnswer": "B",
+        "explanation": "Array.prototype.map() is non-mutating — it returns a brand-new array, leaving the original array untouched.",
+        "difficulty": "medium",
+        "topic": "JavaScript Fundamentals"
+      },
+      {
+        "id": 100011,
+        "questionText": "What is the purpose of the `alt` attribute on an <img> tag?",
+        "questionType": "mcq",
+        "options": {
+          "A": "It sets the image alignment",
+          "B": "It provides alternative text for screen readers and when the image fails to load",
+          "C": "It defines the image's alt-format (e.g. png/jpg)",
+          "D": "It sets a tooltip only, with no accessibility purpose"
+        },
+        "correctAnswer": "B",
+        "explanation": "The alt attribute is read by screen readers and displayed if the image can't load — it's central to web accessibility.",
+        "difficulty": "easy",
+        "topic": "Accessibility"
+      },
+      {
+        "id": 100012,
+        "questionText": "CSS Grid and Flexbox solve the exact same layout problems, so there's never a reason to prefer one over the other.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "B",
+        "explanation": "Flexbox is one-dimensional (row or column), while Grid is two-dimensional (rows and columns together) — they suit different layout needs.",
+        "difficulty": "medium",
+        "topic": "CSS Layout"
+      }
+    ]
+  }
+}

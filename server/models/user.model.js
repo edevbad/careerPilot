@@ -116,6 +116,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    refreshToken: {
+      type: String,
+      default: null,
+      select: false,   // never returned in API responses
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt
@@ -137,10 +142,9 @@ userSchema.virtual("roadmaps", {
 });
 
 // ── Pre-save: hash password ────────────────────────────────────
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
-  next();
 });
 
 // ── Method: verify password ────────────────────────────────────
