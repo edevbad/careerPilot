@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/repositories/roadmap_repository.dart';
 import '../../../core/models/roadmap_model.dart';
@@ -430,70 +431,93 @@ class _ResourceTile extends StatelessWidget {
     }
   }
 
+  Future<void> _openResource(BuildContext context) async {
+    final uri = Uri.tryParse(resource.url);
+    if (uri == null) return;
+    final canOpen = await canLaunchUrl(uri);
+    if (canOpen) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open ${resource.url}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant.withOpacity(0.5),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(children: [
-        Icon(_typeIcon, size: 18, color: AppColors.info),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(resource.title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: resource.isCompleted
-                            ? AppColors.textMuted
-                            : AppColors.textPrimary,
-                        decoration: resource.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                        fontWeight: FontWeight.w600,
-                      )),
-              if (resource.platform.isNotEmpty)
-                Text(resource.platform,
-                    style: Theme.of(context).textTheme.bodySmall),
-            ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => _openResource(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(children: [
+              Icon(_typeIcon, size: 18, color: AppColors.info),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(resource.title,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: resource.isCompleted
+                                  ? AppColors.textMuted
+                                  : AppColors.textPrimary,
+                              decoration: resource.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              fontWeight: FontWeight.w600,
+                            )),
+                    if (resource.platform.isNotEmpty)
+                      Text(resource.platform,
+                          style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onBookmarkToggle,
+                icon: Icon(
+                  resource.isBookmarked
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  size: 18,
+                  color: resource.isBookmarked
+                      ? AppColors.primary
+                      : AppColors.textMuted,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: onCompleteToggle,
+                icon: Icon(
+                  resource.isCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.check_circle_outline_rounded,
+                  size: 18,
+                  color: resource.isCompleted
+                      ? AppColors.success
+                      : AppColors.textMuted,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ]),
           ),
         ),
-        IconButton(
-          onPressed: onBookmarkToggle,
-          icon: Icon(
-            resource.isBookmarked
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
-            size: 18,
-            color:
-                resource.isBookmarked ? AppColors.primary : AppColors.textMuted,
-          ),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          onPressed: onCompleteToggle,
-          icon: Icon(
-            resource.isCompleted
-                ? Icons.check_circle_rounded
-                : Icons.check_circle_outline_rounded,
-            size: 18,
-            color:
-                resource.isCompleted ? AppColors.success : AppColors.textMuted,
-          ),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-        ),
-      ]),
+      ),
     );
   }
 }
-
 class _PhaseCard extends StatelessWidget {
   final String roadmapId;
   final int phaseIndex;

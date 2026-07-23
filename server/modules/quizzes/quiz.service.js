@@ -1,13 +1,7 @@
-const Anthropic  = require("@anthropic-ai/sdk");
-const axios      = require("axios");
-const QuizResult = require("../../models/QuizResult");
-const Roadmap    = require("../../models/Roadmap");
-const Progress   = require("../../models/Progress");
-
-const client = new Anthropic();
-
-// Laravel API base — Quiz Questions live there
-const LARAVEL_API = process.env.LARAVEL_API_URL || "http://localhost:8000/api";
+const QuizResult = require("../../models/quizresult.model");
+const Roadmap    = require("../../models/roadmap.model");
+const Progress   = require("../../models/progress.model");
+const AppError = require("../../utils/appError");
 
 // ── Helpers ────────────────────────────────────────────────────
 
