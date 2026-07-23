@@ -22,8 +22,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _send() async {
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (mounted) setState(() { _loading = false; _sent = true; });
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Forgot Password API is currently unavailable. Please contact support.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override

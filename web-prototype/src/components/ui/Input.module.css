@@ -1,0 +1,78 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+}
+
+.input::placeholder { color: var(--color-text-dim); }
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hasError {
+  border-color: var(--color-error) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.withLeft { padding-left: 2.75rem; }
+
+.leftIcon {
+  position: absolute;
+  left: 0.875rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.rightElement {
+  position: absolute;
+  right: 0.875rem;
+  display: flex;
+  align-items: center;
+}
+
+.errorText {
+  font-size: 0.78rem;
+  color: var(--color-error);
+  font-weight: 500;
+}
+
+.helperText {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}

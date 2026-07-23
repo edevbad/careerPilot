@@ -1,26 +1,98 @@
-const QuizResult = require("../../models/quizresult.model");
-const Roadmap = require("../../models/roadmap.model");
-const Progress = require("../../models/progress.model");
-const AppError = require("../../utils/appError");
-const { getGeminiModel } = require("../../config/gemini");
-const { getQuestionsFromLocalBank } = require("../../data/questionBank");
+const Anthropic  = require("@anthropic-ai/sdk");
+const axios      = require("axios");
+const QuizResult = require("../../models/QuizResult");
+const Roadmap    = require("../../models/Roadmap");
+const Progress   = require("../../models/Progress");
 
-const crypto = require("crypto");
+const client = new Anthropic();
 
-function signAnswer(questionId, correctAnswer) {
-  return crypto
-    .createHmac("sha256", process.env.QUIZ_SIGNING_SECRET)
-    .update(`${questionId}:${correctAnswer.toLowerCase().trim()}`)
-    .digest("hex");
-}
-
-function verifyAnswer(questionId, userAnswer, token) {
-  if (!userAnswer || !token) return false;
-  const expected = signAnswer(questionId, userAnswer);
-  return expected === token;
-}
+// Laravel API base — Quiz Questions live there
+const LARAVEL_API = process.env.LARAVEL_API_URL || "http://localhost:8000/api";
 
 // ── Helpers ────────────────────────────────────────────────────
+
+// GEMINI HELPERS
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const parseRetryDelay = (msg, defaultMs = 15000) => {
+  const match = msg?.match(/retryDelay[^0-9]*(\d+)/);
+  return match ? parseInt(match[1], 10) * 1000 : defaultMs;
+};
+
+const callGemini = async (prompt, maxRetries = 2) => {
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      const model = getGeminiModel();
+
+      const result = await model.generateContent({
+        systemInstruction:
+          "You are an AI career coach that always responds with valid JSON only.",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+      });
+
+      const raw = result.response.text();
+
+      if (!raw?.trim()) {
+        throw new AppError(502, "AI returned an empty response.");
+      }
+
+      const cleaned = raw
+        .trim()
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        console.error("Unparseable Gemini response:", raw);
+        throw new AppError(502, "AI returned malformed JSON.");
+      }
+    } catch (err) {
+      const msg = err.message || "";
+      const is429 = msg.includes("429") || msg.includes("Too Many Requests");
+      const isQuota = msg.includes("quota");
+
+      if ((is429 || isQuota) && attempt < maxRetries) {
+        const delay = parseRetryDelay(msg, 20000);
+        console.warn(
+          `Gemini rate limit. Retrying in ${delay / 1000}s...`
+        );
+
+        await sleep(delay);
+        attempt++;
+        continue;
+      }
+
+      if (isQuota && msg.includes("limit: 0")) {
+        throw new AppError(
+          503,
+          "AI daily quota reached. Please try again tomorrow."
+        );
+      }
+
+      if (is429 || isQuota) {
+        throw new AppError(
+          429,
+          "AI service is busy. Please wait and try again."
+        );
+      }
+
+      if (err.statusCode) throw err;
+
+      throw new AppError(502, `AI service error: ${msg}`);
+    }
+  }
+};
 
 // GEMINI HELPERS
 
@@ -158,17 +230,12 @@ Return:
 
 [
   {
-    "questionText":"...",
-    "questionType":"mcq" | "true-false" | "code-review",
-    "options":{
-      "A":"...",
-      "B":"...",
-      "C":"...",
-      "D":"..."
-    },
-    "correctAnswer":"A",
-    "explanation":"...",
-    "difficulty":"easy"
+    "questionText": "...",
+    "questionType": "mcq|true-false|code-review",
+    "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
+    "correctAnswer": "A",
+    "explanation": "...",
+    "difficulty": "easy|medium|hard"
   }
 ]
 
@@ -181,53 +248,23 @@ options = {
 For code-review include the code snippet inside questionText.
 `;
 
-  const questions = await callGemini(prompt);
-
-  if (!Array.isArray(questions)) {
-    throw new AppError(502, "AI returned invalid question format.");
-  }
-
-  return questions.slice(0, count).map((q, i) => {
-    const id = -(i + 1);
-    return {
-      ...q,
-      questionType: normalizeQuestionType(q.questionType),
-      id,
-      isAiGenerated: true,
-      _answerToken: signAnswer(id, q.correctAnswer), // sent to client instead of the answer
-      correctAnswer: undefined, // never leaves the server
-      explanation: q.explanation, // fine to keep, or strip too if you want extra safety
-    };
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 3000,
+    messages: [{ role: "user", content: prompt }],
   });
-}
 
-/**
- * Adapt a local question-bank entry into the same shape the rest of
- * this module expects (matching what generateAIQuestions produces),
- * including the HMAC answer token so grading works identically for
- * bank questions and AI-generated ones.
- *
- * Local bank IDs are expected to be POSITIVE integers, distinct from
- * the negative IDs used for AI-generated questions, so grading can
- * still branch on sign if needed. They are NOT treated as "DB
- * questions" anymore (no more fetchQuestionsForGrading/Laravel) —
- * grading now looks them up via the same local bank + answer token.
- */
-function adaptLocalBankQuestion(q) {
-  return {
-    id: q.id,
-    questionText: q.questionText,
-    questionType: normalizeQuestionType(q.questionType),
-    options: q.options,
-    difficulty: q.difficulty,
-    topic: q.topic,
-    isAiGenerated: false,
-    _answerToken: signAnswer(q.id, q.correctAnswer),
-    // correctAnswer/explanation intentionally omitted from the
-    // client-facing shape — see getQuizQuestions' stripping step.
-    _correctAnswer: q.correctAnswer,
-    _explanation: q.explanation,
-  };
+  const raw = response.content[0].text.trim();
+  const questions = JSON.parse(raw);
+  if (!Array.isArray(questions)) throw new Error("AI returned invalid question format");
+
+  // Tag as AI-generated and assign temporary negative IDs
+  // so the grading layer knows not to look them up in Laravel
+  return questions.slice(0, count).map((q, i) => ({
+    ...q,
+    id: -(i + 1),         // Negative ID = AI-generated, not in DB
+    isAiGenerated: true,
+  }));
 }
 
 /**

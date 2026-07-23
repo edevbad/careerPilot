@@ -13,9 +13,10 @@ import '../features/tasks/screens/tasks_screen.dart';
 import '../features/quiz/screens/quiz_hub_screen.dart';
 import '../features/quiz/screens/active_quiz_screen.dart';
 import '../features/quiz/screens/quiz_results_screen.dart';
+import '../features/profile/screens/profile_screen.dart';
+import '../core/models/quiz_session_model.dart';
 // import '../features/resources/screens/resource_browse_screen.dart';
 // import '../features/resources/screens/resource_detail_screen.dart';
-// import '../features/profile/screens/profile_screen.dart';
 import 'main_shell.dart';
 
 final GoRouter router = GoRouter(
@@ -82,6 +83,13 @@ final GoRouter router = GoRouter(
               path: '/tasks',
               builder: (context, state) => const TasksScreen(),
             ),
+            GoRoute(
+              path: '/roadmaps/:roadmapId/tasks/:phaseNumber',
+              builder: (context, state) {
+                final roadmapId = state.pathParameters['roadmapId'];
+                return TasksScreen(initialRoadmapId: roadmapId);
+              },
+            ),
           ],
         ),
 
@@ -94,16 +102,35 @@ final GoRouter router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'results',
-                  builder: (context, state) => QuizResultsScreen(
-                    passed: (state.extra as Map?)?['passed'] ?? true,
-                    score: (state.extra as Map?)?['score'] ?? 84,
-                  ),
+                  builder: (context, state) {
+                    final extra = state.extra as Map<String, dynamic>?;
+                    final result = extra?['result'] as QuizResultModel?;
+                    if (result != null) {
+                      return QuizResultsScreen(result: result);
+                    }
+                    // Fallback for direct navigation without result
+                    return QuizResultsScreen(
+                      result: QuizResultModel(
+                        passed: extra?['passed'] as bool? ?? false,
+                        score: extra?['score'] as int? ?? 0,
+                        correctAnswers: 0,
+                        totalQuestions: 0,
+                        passingScore: 70,
+                        nextPhaseUnlocked: false,
+                        activePhaseNumber: 1,
+                        durationFormatted: '',
+                        studySuggestions: [],
+                      ),
+                    );
+                  },
                 ),
                 GoRoute(
-                  path: ':phaseNumber',
+                  path: ':roadmapId/:phaseNumber',
                   builder: (context, state) => ActiveQuizScreen(
-                    phaseNumber:
-                        int.tryParse(state.pathParameters['phaseNumber'] ?? '2') ?? 2,
+                    roadmapId: state.pathParameters['roadmapId']!,
+                    phaseNumber: int.tryParse(
+                            state.pathParameters['phaseNumber'] ?? '1') ??
+                        1,
                   ),
                 ),
               ],
@@ -112,29 +139,15 @@ final GoRouter router = GoRouter(
         ),
 
         // Branch 4 — Profile
-        // StatefulShellBranch(
-        //   routes: [
-        //     GoRoute(
-        //       path: '/profile',
-        //       builder: (context, state) => const ProfileScreen(),
-        //     ),
-        //   ],
-        // ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (context, state) => const ProfileScreen(),
+            ),
+          ],
+        ),
       ],
     ),
-
-    // // ── Resources (accessible from anywhere) ────────
-    // GoRoute(
-    //   path: '/resources',
-    //   builder: (context, state) => const ResourceBrowseScreen(),
-    //   routes: [
-    //     GoRoute(
-    //       path: ':id',
-    //       builder: (context, state) => ResourceDetailScreen(
-    //         resourceId: state.pathParameters['id']!,
-    //       ),
-    //     ),
-    //   ],
-    // ),
   ],
 );

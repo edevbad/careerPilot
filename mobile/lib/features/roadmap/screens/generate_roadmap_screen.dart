@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 
+import '../../../core/repositories/roadmap_repository.dart';
+
 class GenerateRoadmapScreen extends StatefulWidget {
   const GenerateRoadmapScreen({super.key});
   @override
@@ -10,6 +12,7 @@ class GenerateRoadmapScreen extends StatefulWidget {
 }
 
 class _GenerateRoadmapScreenState extends State<GenerateRoadmapScreen> {
+  final _roadmapRepository = RoadmapRepository();
   final _pageCtrl = PageController();
   int _step = 0;
   bool _generating = false;
@@ -52,8 +55,29 @@ class _GenerateRoadmapScreenState extends State<GenerateRoadmapScreen> {
 
   Future<void> _generate() async {
     setState(() => _generating = true);
-    await Future.delayed(const Duration(milliseconds: 2500));
-    if (mounted) context.go('/roadmap/r1');
+    try {
+      String formatDate(DateTime d) =>
+          "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+      
+      final roadmap = await _roadmapRepository.generateRoadmap(
+        targetCareer: _goalCtrl.text.trim(),
+        skillLevel: _skillLevel,
+        duration: _duration,
+        interests: _interestsCtrl.text.trim(),
+        startDate: formatDate(_startDate ?? DateTime.now()),
+      );
+      if (mounted) {
+        // Pop and return true to refresh list screen, or go to details
+        context.go('/roadmap/${roadmap.id}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _generating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate roadmap: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   @override
@@ -121,70 +145,350 @@ class _GenerateRoadmapScreenState extends State<GenerateRoadmapScreen> {
 }
 
 // ── Step 1: Career Goal ───────────────────────────────
-class _Step1 extends StatelessWidget {
+class _Step1 extends StatefulWidget {
   final _GenerateRoadmapScreenState parent;
-  const _Step1(this.parent);
+  const _Step1(this.parent, {super.key});
+
+  @override
+  State<_Step1> createState() => _Step1State();
+}
+
+class _Step1State extends State<_Step1> {
+  final _searchCtrl = TextEditingController();
+  bool _showDropdown = false;
+  List<String> _filtered = [];
+
+  static const _careers = [
+    // Web Development
+    'Frontend Developer',
+    'Backend Developer',
+    'Full Stack Developer',
+    // Mobile
+    'Mobile Developer',
+    'iOS Developer',
+    'Android Developer',
+    'Flutter Developer',
+    'React Native Developer',
+    // Data & AI
+    'Data Scientist',
+    'Data Analyst',
+    'Machine Learning Engineer',
+    'AI Engineer',
+    'Data Engineer',
+    // Cloud & Infrastructure
+    'DevOps Engineer',
+    'Cloud Engineer',
+    'Site Reliability Engineer',
+    'Cybersecurity Engineer',
+    // Design
+    'UI/UX Designer',
+    'Product Designer',
+    'Graphic Designer',
+    // Other Engineering
+    'Software Engineer',
+    'Blockchain Developer',
+    'Game Developer',
+    'Embedded Systems Engineer',
+    'QA Engineer',
+    // Product & Management
+    'Product Manager',
+    'Technical Project Manager',
+    'Scrum Master',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = _careers;
+    // Pre-fill search if parent already has a value
+    _searchCtrl.text = widget.parent._goalCtrl.text;
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      _showDropdown = true;
+      _filtered = query.isEmpty
+          ? _careers
+          : _careers
+              .where((c) => c.toLowerCase().contains(query.toLowerCase()))
+              .toList();
+    });
+  }
+
+  void _select(String career) {
+    _searchCtrl.text = career;
+    widget.parent._goalCtrl.text = career;
+    widget.parent.setState(() {});
+    setState(() => _showDropdown = false);
+    FocusScope.of(context).unfocus();
+  }
 
   @override
   Widget build(BuildContext context) {
     final levels = ['Beginner', 'Intermediate', 'Advanced'];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 8),
-        Text('What career are you targeting?',
-            style: Theme.of(context).textTheme.headlineSmall).animate().fadeIn(),
-        const SizedBox(height: 6),
-        Text('Be specific — e.g., "Backend Developer", "UX Designer"',
-            style: Theme.of(context).textTheme.bodyMedium).animate().fadeIn(delay: 100.ms),
-        const SizedBox(height: 24),
-        TextField(
-          controller: parent._goalCtrl,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.work_outline_rounded, color: AppColors.textMuted, size: 20),
-            hintText: 'e.g. Backend Developer',
-            labelText: 'Career Goal',
-          ),
-        ),
-        const SizedBox(height: 28),
-        Text('Current skill level', style: Theme.of(context).textTheme.bodyMedium
-            ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 12),
-        StatefulBuilder(builder: (context, setInner) => Column(children: levels.map((l) {
-          final selected = parent._skillLevel == l;
-          return GestureDetector(
-            onTap: () {
-              parent.setState(() => parent._skillLevel = l);
-              setInner(() {});
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary.withOpacity(0.12) : AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: selected ? AppColors.primary : AppColors.border, width: selected ? 1.5 : 1),
-              ),
-              child: Row(children: [
-                Icon(
-                  l == 'Beginner' ? Icons.emoji_events_outlined
-                      : l == 'Intermediate' ? Icons.trending_up_rounded
-                      : Icons.rocket_launch_rounded,
-                  color: selected ? AppColors.primary : AppColors.textMuted, size: 20,
+
+    return GestureDetector(
+      // Tap anywhere outside dropdown to close it
+      onTap: () => setState(() => _showDropdown = false),
+      behavior: HitTestBehavior.translucent,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Text(
+              'What career are you targeting?',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ).animate().fadeIn(),
+            const SizedBox(height: 6),
+            Text(
+              'Search or select your target career below',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ).animate().fadeIn(delay: 100.ms),
+            const SizedBox(height: 24),
+
+            // ── Searchable dropdown ──────────────────
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search input
+                TextField(
+                  controller: _searchCtrl,
+                  onTap: () => setState(() {
+                    _showDropdown = true;
+                    _filtered = _careers;
+                  }),
+                  onChanged: _onSearch,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(
+                      Icons.work_outline_rounded,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
+                    suffixIcon: _searchCtrl.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded,
+                                size: 18, color: AppColors.textMuted),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              widget.parent._goalCtrl.clear();
+                              widget.parent.setState(() {});
+                              setState(() {
+                                _filtered = _careers;
+                                _showDropdown = true;
+                              });
+                            },
+                          )
+                        : const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textMuted),
+                    hintText: 'Search careers...',
+                    labelText: 'Career Goal',
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Text(l, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: selected ? AppColors.primary : AppColors.textPrimary,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
-                const Spacer(),
-                if (selected) const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
-              ]),
+
+                // Dropdown list
+                if (_showDropdown && _filtered.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shrinkWrap: true,
+                      itemCount: _filtered.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: AppColors.border,
+                      ),
+                      itemBuilder: (context, i) {
+                        final career = _filtered[i];
+                        final isSelected =
+                            widget.parent._goalCtrl.text == career;
+                        return InkWell(
+                          onTap: () => _select(career),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _iconForCareer(career),
+                                  size: 16,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    career,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : AppColors.textPrimary,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w400,
+                                        ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(Icons.check_rounded,
+                                      size: 16, color: AppColors.primary),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ).animate().fadeIn(duration: 150.ms).slideY(begin: -0.05, end: 0),
+
+                // No results
+                if (_showDropdown && _filtered.isEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search_off_rounded,
+                            size: 16, color: AppColors.textMuted),
+                        const SizedBox(width: 8),
+                        Text(
+                          'No match — your custom input will be used',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-          );
-        }).toList())),
-      ]),
+
+            const SizedBox(height: 28),
+
+            // ── Skill level selector (unchanged) ─────
+            Text(
+              'Current skill level',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            StatefulBuilder(
+              builder: (context, setInner) => Column(
+                children: levels.map((l) {
+                  final selected = widget.parent._skillLevel == l;
+                  return GestureDetector(
+                    onTap: () {
+                      widget.parent.setState(() => widget.parent._skillLevel = l);
+                      setInner(() {});
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppColors.primary.withOpacity(0.12)
+                            : AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selected ? AppColors.primary : AppColors.border,
+                          width: selected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(children: [
+                        Icon(
+                          l == 'Beginner'
+                              ? Icons.emoji_events_outlined
+                              : l == 'Intermediate'
+                                  ? Icons.trending_up_rounded
+                                  : Icons.rocket_launch_rounded,
+                          color: selected
+                              ? AppColors.primary
+                              : AppColors.textMuted,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          l,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.textPrimary,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                        ),
+                        const Spacer(),
+                        if (selected)
+                          const Icon(Icons.check_circle_rounded,
+                              color: AppColors.primary, size: 20),
+                      ]),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
     );
+  }
+
+  IconData _iconForCareer(String career) {
+    if (career.contains('Frontend') || career.contains('UI')) return Icons.web_rounded;
+    if (career.contains('Backend')) return Icons.dns_rounded;
+    if (career.contains('Full Stack')) return Icons.layers_rounded;
+    if (career.contains('Mobile') || career.contains('Flutter') ||
+        career.contains('iOS') || career.contains('Android') ||
+        career.contains('React Native')) return Icons.smartphone_rounded;
+    if (career.contains('Data') || career.contains('ML') ||
+        career.contains('AI')) return Icons.insights_rounded;
+    if (career.contains('DevOps') || career.contains('Cloud') ||
+        career.contains('SRE')) return Icons.cloud_rounded;
+    if (career.contains('Security')) return Icons.security_rounded;
+    if (career.contains('Designer') || career.contains('UX')) return Icons.palette_rounded;
+    if (career.contains('Game')) return Icons.sports_esports_rounded;
+    if (career.contains('Blockchain')) return Icons.currency_bitcoin_rounded;
+    if (career.contains('QA')) return Icons.bug_report_rounded;
+    if (career.contains('Manager') || career.contains('Scrum')) return Icons.manage_accounts_rounded;
+    return Icons.work_outline_rounded;
   }
 }
 
