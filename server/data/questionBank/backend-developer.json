@@ -1,0 +1,142 @@
+{
+  "career": "Backend Developer",
+  "phases": {
+    "1": [
+      {
+        "id": 200001,
+        "questionText": "What is the primary purpose of an HTTP status code in the 4xx range?",
+        "questionType": "mcq",
+        "options": {
+          "A": "Indicates a successful request",
+          "B": "Indicates a client error, such as a bad request or missing resource",
+          "C": "Indicates a server error",
+          "D": "Indicates a redirect"
+        },
+        "correctAnswer": "B",
+        "explanation": "4xx codes signal that the client's request was malformed or invalid in some way (e.g. 404 Not Found, 400 Bad Request).",
+        "difficulty": "easy",
+        "topic": "HTTP Fundamentals"
+      },
+      {
+        "id": 200002,
+        "questionText": "REST APIs must always return JSON responses.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "B",
+        "explanation": "REST is an architectural style, not a data-format requirement — REST APIs can return XML, HTML, plain text, or other formats.",
+        "difficulty": "easy",
+        "topic": "API Design"
+      },
+      {
+        "id": 200003,
+        "questionText": "Which SQL clause is used to filter grouped rows after a GROUP BY?",
+        "questionType": "mcq",
+        "options": {
+          "A": "WHERE",
+          "B": "HAVING",
+          "C": "FILTER",
+          "D": "ORDER BY"
+        },
+        "correctAnswer": "B",
+        "explanation": "HAVING filters aggregated groups, while WHERE filters individual rows before grouping occurs.",
+        "difficulty": "medium",
+        "topic": "Databases"
+      },
+      {
+        "id": 200004,
+        "questionText": "Review this Node.js snippet:\n\napp.get('/user/:id', async (req, res) => {\n  const user = await User.findById(req.params.id);\n  res.json(user);\n});\n\nWhat is a potential issue with this code?",
+        "questionType": "code-review",
+        "options": {
+          "A": "It doesn't handle the case where user is null or the DB call throws an error",
+          "B": "It uses the wrong HTTP verb",
+          "C": "async/await can't be used inside route handlers",
+          "D": "req.params.id is invalid syntax"
+        },
+        "correctAnswer": "A",
+        "explanation": "There's no try/catch or null-check, so a missing user or a DB error would either send an empty response or crash the process via an unhandled rejection.",
+        "difficulty": "medium",
+        "topic": "Node.js"
+      },
+      {
+        "id": 200005,
+        "questionText": "What does 'idempotent' mean in the context of HTTP methods?",
+        "questionType": "mcq",
+        "options": {
+          "A": "The request can only be sent once",
+          "B": "Making the same request multiple times produces the same result as making it once",
+          "C": "The request always returns a 200 status",
+          "D": "The method requires authentication"
+        },
+        "correctAnswer": "B",
+        "explanation": "Idempotent methods (like GET, PUT, DELETE) can be repeated without changing the outcome beyond the first successful call.",
+        "difficulty": "medium",
+        "topic": "HTTP Fundamentals"
+      },
+      {
+        "id": 200006,
+        "questionText": "A database index always makes both reads and writes faster.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "B",
+        "explanation": "Indexes speed up reads/lookups but add overhead to writes (inserts/updates/deletes) since the index must also be updated.",
+        "difficulty": "medium",
+        "topic": "Databases"
+      },
+      {
+        "id": 200007,
+        "questionText": "What is the main advantage of using environment variables for secrets like API keys?",
+        "questionType": "mcq",
+        "options": {
+          "A": "They make the code run faster",
+          "B": "They keep sensitive values out of source control and allow different values per environment",
+          "C": "They are required by JavaScript syntax",
+          "D": "They automatically encrypt the values"
+        },
+        "correctAnswer": "B",
+        "explanation": "Environment variables separate config/secrets from code, so they can differ between dev/staging/production without committing secrets to the repo.",
+        "difficulty": "easy",
+        "topic": "Security"
+      },
+      {
+        "id": 200008,
+        "questionText": "Review this snippet:\n\nconst token = jwt.sign({ userId }, 'my-secret-key');\n\nWhat is the security concern here?",
+        "questionType": "code-review",
+        "options": {
+          "A": "JWTs cannot contain a userId",
+          "B": "The secret key is hardcoded in source instead of loaded from a secure environment variable",
+          "C": "jwt.sign() is deprecated",
+          "D": "There is no concern; this is standard practice"
+        },
+        "correctAnswer": "B",
+        "explanation": "Hardcoding secrets in source code risks exposure via version control; secrets should come from environment variables or a secrets manager.",
+        "difficulty": "medium",
+        "topic": "Security"
+      },
+      {
+        "id": 200009,
+        "questionText": "What problem does connection pooling solve for a database-backed API?",
+        "questionType": "mcq",
+        "options": {
+          "A": "It prevents SQL injection",
+          "B": "It reuses a limited set of open connections instead of opening/closing one per request, improving performance",
+          "C": "It encrypts data in transit",
+          "D": "It automatically scales the database horizontally"
+        },
+        "correctAnswer": "B",
+        "explanation": "Opening a new DB connection per request is expensive; pooling reuses a small set of persistent connections across requests.",
+        "difficulty": "medium",
+        "topic": "Databases"
+      },
+      {
+        "id": 200010,
+        "questionText": "Rate limiting on an API endpoint is primarily used to prevent abuse and protect backend resources from being overwhelmed.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "A",
+        "explanation": "Rate limiting caps how many requests a client can make in a time window, protecting the service from abuse, bugs, or traffic spikes.",
+        "difficulty": "easy",
+        "topic": "API Design"
+      }
+    ]
+  }
+}

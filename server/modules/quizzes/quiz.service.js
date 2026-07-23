@@ -1,9 +1,9 @@
-const axios = require("axios");
 const QuizResult = require("../../models/quizresult.model");
 const Roadmap = require("../../models/roadmap.model");
 const Progress = require("../../models/progress.model");
 const AppError = require("../../utils/appError");
 const { getGeminiModel } = require("../../config/gemini");
+const { getQuestionsFromLocalBank } = require("../../data/questionBank");
 
 const crypto = require("crypto");
 
@@ -19,8 +19,6 @@ function verifyAnswer(questionId, userAnswer, token) {
   const expected = signAnswer(questionId, userAnswer);
   return expected === token;
 }
-
-
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -123,35 +121,8 @@ function normalizeQuestionType(raw) {
 }
 
 /**
- * Fetch questions from the Laravel question bank for a skill + phase.
- * Returns an array of question objects with correct_answer EXCLUDED
- * (Laravel's $hidden ensures this — we fetch the full record separately
- * at grading time via the internal endpoint).
- */
-async function fetchQuestionsFromBank(skillId, phase, count = 15) {
-  const { data } = await axios.get(`${LARAVEL_API}/internal/questions`, {
-    params: { skill_id: skillId, phase, count },
-    headers: { "X-Internal-Key": process.env.INTERNAL_API_KEY },
-  });
-  return data.questions || [];
-}
-
-/**
- * Fetch the full question records (including correct_answer) for grading.
- * This hits a server-to-server only endpoint — never exposed to the client.
- */
-async function fetchQuestionsForGrading(questionIds) {
-  const { data } = await axios.post(`${LARAVEL_API}/internal/questions/grade`, {
-    ids: questionIds,
-  }, {
-    headers: { "X-Internal-Key": process.env.INTERNAL_API_KEY },
-  });
-  return data.questions || []; // Includes correct_answer + explanation
-}
-
-/**
- * Use Claude to generate AI-fallback questions when the bank has
- * fewer than the minimum required (10).
+ * Use Gemini to generate AI-fallback questions when neither the local
+ * question bank nor (previously) Laravel had enough for this phase.
  */
 async function generateAIQuestions(
   phase,
@@ -223,8 +194,6 @@ For code-review include the code snippet inside questionText.
       questionType: normalizeQuestionType(q.questionType),
       id,
       isAiGenerated: true,
-      id,
-      isAiGenerated: true,
       _answerToken: signAnswer(id, q.correctAnswer), // sent to client instead of the answer
       correctAnswer: undefined, // never leaves the server
       explanation: q.explanation, // fine to keep, or strip too if you want extra safety
@@ -233,7 +202,36 @@ For code-review include the code snippet inside questionText.
 }
 
 /**
- * Generate study suggestions for a failed attempt using Claude.
+ * Adapt a local question-bank entry into the same shape the rest of
+ * this module expects (matching what generateAIQuestions produces),
+ * including the HMAC answer token so grading works identically for
+ * bank questions and AI-generated ones.
+ *
+ * Local bank IDs are expected to be POSITIVE integers, distinct from
+ * the negative IDs used for AI-generated questions, so grading can
+ * still branch on sign if needed. They are NOT treated as "DB
+ * questions" anymore (no more fetchQuestionsForGrading/Laravel) —
+ * grading now looks them up via the same local bank + answer token.
+ */
+function adaptLocalBankQuestion(q) {
+  return {
+    id: q.id,
+    questionText: q.questionText,
+    questionType: normalizeQuestionType(q.questionType),
+    options: q.options,
+    difficulty: q.difficulty,
+    topic: q.topic,
+    isAiGenerated: false,
+    _answerToken: signAnswer(q.id, q.correctAnswer),
+    // correctAnswer/explanation intentionally omitted from the
+    // client-facing shape — see getQuizQuestions' stripping step.
+    _correctAnswer: q.correctAnswer,
+    _explanation: q.explanation,
+  };
+}
+
+/**
+ * Generate study suggestions for a failed attempt using Gemini.
  */
 async function generateStudySuggestions(
   phase,
@@ -292,9 +290,17 @@ Example:
 
 /**
  * Fetch a question set for a quiz attempt.
- * Pulls from the Laravel bank; falls back to AI generation if bank
- * has fewer than 10 questions for this phase.
- * Correct answers are NEVER included in the returned payload.
+ *
+ * Question source priority (Laravel has been removed entirely):
+ *   1. Local JSON question bank (data/questionBank/*.json), keyed by
+ *      targetCareer + phaseNumber. Zero network calls, zero rate limits.
+ *   2. Gemini AI generation, only for whatever shortfall remains after
+ *      the local bank (e.g. career not covered locally, or bank has
+ *      fewer than QUESTION_TARGET questions for this phase).
+ *
+ * Correct answers are NEVER included in the returned payload for
+ * either source — grading is done via the signed answer token,
+ * exactly as it was for AI-generated questions before.
  */
 async function getQuizQuestions(userId, roadmapId, phaseNumber) {
   const roadmap = await Roadmap.findOne({ _id: roadmapId, userId });
@@ -326,23 +332,19 @@ async function getQuizQuestions(userId, roadmapId, phaseNumber) {
     );
   }
 
-  const QUESTION_TARGET = 15;
-  const MINIMUM_FROM_BANK = 10;
+  const QUESTION_TARGET = 10;
 
-  // Phase maps to a skill — use activePhaseNumber's index as a proxy
-  // In production this would be a proper skill_id stored on the phase
-  const phaseKey = `phase_${phaseNumber}`;
-  let questions = [];
+  // 1) Try the local bank first — no network call, no rate limit risk.
+  const localQuestions = getQuestionsFromLocalBank(
+    roadmap.targetCareer,
+    phaseNumber,
+    QUESTION_TARGET
+  ).map(adaptLocalBankQuestion);
 
-  try {
-    questions = await fetchQuestionsFromBank(null, phaseKey, QUESTION_TARGET);
-  } catch {
-    // Laravel unreachable — fall through to AI generation
-    questions = [];
-  }
+  let questions = [...localQuestions];
 
-  // Supplement with AI questions if bank is thin
-  if (questions.length < MINIMUM_FROM_BANK) {
+  // 2) Only hit Gemini for whatever shortfall remains.
+  if (questions.length < QUESTION_TARGET) {
     const needed = QUESTION_TARGET - questions.length;
     const aiQuestions = await generateAIQuestions(
       phase,
@@ -353,8 +355,10 @@ async function getQuizQuestions(userId, roadmapId, phaseNumber) {
     questions = [...questions, ...aiQuestions];
   }
 
-  // Strip correct_answer and explanation before sending to client
-  const safeQuestions = questions.map(({ correctAnswer, explanation, ...safe }) => safe);
+  // Strip anything answer-bearing before sending to client.
+  const safeQuestions = questions.map(
+    ({ _correctAnswer, _explanation, correctAnswer, explanation, ...safe }) => safe
+  );
 
   return {
     roadmapId,
@@ -370,8 +374,23 @@ async function getQuizQuestions(userId, roadmapId, phaseNumber) {
 
 /**
  * Grade a submitted quiz.
- * Fetches correct answers server-side, scores the attempt, writes
- * QuizResult, and unlocks the next phase if passed.
+ *
+ * All grading — whether the question came from the local bank or
+ * from Gemini — now goes through the same signed-token verification
+ * path (verifyAnswer). There is no more DB/Laravel round-trip for
+ * grading data: the client must echo back questionText/_explanation/
+ * _answerToken for local-bank questions the same way it already did
+ * for AI questions, OR (recommended) the frontend looks these up from
+ * the original getQuizQuestions payload it cached client-side.
+ *
+ * NOTE: since correctAnswer/explanation are stripped before the
+ * question ever reaches the client, and local-bank questions no
+ * longer have a server-side "fetch by ID" step, the client is
+ * responsible for submitting back whatever safe metadata it needs
+ * displayed post-grading (questionText, topic, etc.) alongside its
+ * answer + the token. This mirrors exactly how AI-generated
+ * questions already worked before this change — local-bank questions
+ * are just no longer a special case.
  */
 async function submitQuiz(userId, roadmapId, phaseNumber, { answers, startedAt }) {
   const roadmap = await Roadmap.findOne({ _id: roadmapId, userId });
@@ -395,70 +414,32 @@ async function submitQuiz(userId, roadmapId, phaseNumber, { answers, startedAt }
     );
   }
 
-  // Separate DB questions from AI-generated ones (negative IDs)
-  const dbQuestionIds = answers
-    .map(a => a.questionId)
-    .filter(id => id > 0);
-
-  const aiAnswers = answers.filter(a => a.questionId < 0);
-
-  // Fetch grading data for DB questions
-  let dbQuestions = [];
-  if (dbQuestionIds.length > 0) {
-    dbQuestions = await fetchQuestionsForGrading(dbQuestionIds);
-  }
-
-  // Build a lookup map: questionId -> full question record
-  const questionMap = {};
-  for (const q of dbQuestions) {
-    questionMap[q.id] = q;
-  }
-
-  // Grade every answer
+  // Grade every answer via the signed token — works identically for
+  // local-bank questions (positive IDs) and AI-generated ones
+  // (negative IDs). No DB/Laravel lookup step anymore.
   const gradedAnswers = [];
   let correctCount = 0;
   const wrongTopics = new Set();
 
   for (const submitted of answers) {
-    const isAI = submitted.questionId < 0;
+    const isCorrect = verifyAnswer(
+      submitted.questionId,
+      submitted.userAnswer,
+      submitted._answerToken
+    );
 
-    if (isAI) {
-      const isCorrect = verifyAnswer(submitted.questionId, submitted.userAnswer, submitted._answerToken);
+    if (isCorrect) correctCount++;
+    else wrongTopics.add(submitted._topic || phase.title);
 
-      if (isCorrect) correctCount++;
-      else wrongTopics.add(submitted._topic || phase.title);
-
-      gradedAnswers.push({
-        questionId: submitted.questionId,
-        questionText: submitted.questionText || "",
-        userAnswer: submitted.userAnswer,
-        correctAnswer: isCorrect ? submitted.userAnswer : "See explanation",
-        isCorrect,
-        explanation: submitted._explanation || "",
-        questionType: normalizeQuestionType(submitted.questionType) || "mcq",
-      });
-    } else {
-      const q = questionMap[submitted.questionId];
-      if (!q) continue;
-
-      const isCorrect =
-        submitted.userAnswer !== null &&
-        submitted.userAnswer?.toLowerCase().trim() ===
-        q.correct_answer?.toLowerCase().trim();
-
-      if (isCorrect) correctCount++;
-      else wrongTopics.add(q.question_text?.substring(0, 60) || phase.title);
-
-      gradedAnswers.push({
-        questionId: q.id,
-        questionText: q.question_text,
-        userAnswer: submitted.userAnswer,
-        correctAnswer: q.correct_answer,
-        isCorrect,
-        explanation: q.explanation,
-        questionType: q.question_type,
-      });
-    }
+    gradedAnswers.push({
+      questionId: submitted.questionId,
+      questionText: submitted.questionText || "",
+      userAnswer: submitted.userAnswer,
+      correctAnswer: isCorrect ? submitted.userAnswer : "See explanation",
+      isCorrect,
+      explanation: submitted._explanation || "",
+      questionType: normalizeQuestionType(submitted.questionType) || "mcq",
+    });
   }
 
   const totalQuestions = gradedAnswers.length;

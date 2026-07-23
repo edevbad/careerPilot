@@ -1,0 +1,49 @@
+{
+  "_comment": "Copy this file to <career-slug>.json (e.g. data-analyst.json) and delete this comment. The filename doesn't matter — 'career' is what's matched against roadmap.targetCareer (case-insensitive, slugified).",
+  "career": "Example Career Name",
+  "phases": {
+    "1": [
+      {
+        "id": 900001,
+        "questionText": "Question text goes here?",
+        "questionType": "mcq",
+        "options": {
+          "A": "Option A",
+          "B": "Option B",
+          "C": "Option C",
+          "D": "Option D"
+        },
+        "correctAnswer": "A",
+        "explanation": "Why A is correct, shown to the student after grading.",
+        "difficulty": "easy",
+        "topic": "Topic Name"
+      },
+      {
+        "id": 900002,
+        "questionText": "A true/false statement goes here.",
+        "questionType": "true-false",
+        "options": { "A": "True", "B": "False" },
+        "correctAnswer": "B",
+        "explanation": "Explanation here.",
+        "difficulty": "medium",
+        "topic": "Topic Name"
+      },
+      {
+        "id": 900003,
+        "questionText": "Review this code snippet:\n\n<code here, use \\n for line breaks>\n\nWhat's wrong with it?",
+        "questionType": "code-review",
+        "options": {
+          "A": "Option A",
+          "B": "Option B",
+          "C": "Option C",
+          "D": "Option D"
+        },
+        "correctAnswer": "B",
+        "explanation": "Explanation here.",
+        "difficulty": "medium",
+        "topic": "Topic Name"
+      }
+    ],
+    "2": []
+  }
+}
