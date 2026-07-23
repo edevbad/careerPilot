@@ -1,10 +1,10 @@
 {
   "templates": [
     {
-      "targetCareer": "Full Stack Web Development",
+      "targetCareer": "Full Stack Developer",
       "skillLevel": "Beginner",
       "duration": "1 month",
-      "interests": ["web development", "javascript"],
+      "interests": [],
       "summary": "A fast-paced crash course covering just enough HTML, CSS, and JavaScript to build a simple static site.",
       "phases": [
         {
